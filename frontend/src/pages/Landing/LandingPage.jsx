@@ -1,6 +1,7 @@
 import Head from "../../Components/MainPage/Head";
 import Map from "../../Components/MainPage/Map";
 import Programs from "../../Components/MainPage/Programs";
+import OrganizationalStructure from "../../Components/MainPage/OrganizationalStructure";
 
 const LandingPage = () => {
   return (
@@ -20,6 +21,13 @@ const LandingPage = () => {
           className="w-full scroll-mt-24 bg-black"
         >
           <Programs />
+        </section>
+
+        <section
+          id="organizational-structure"
+          className="w-full scroll-mt-24 bg-black"
+        >
+          <OrganizationalStructure />
         </section>
       </div>
     </main>
