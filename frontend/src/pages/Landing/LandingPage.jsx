@@ -17,18 +17,9 @@ const LandingPage = () => {
 
         <section
           id="programs"
-          className="mt-0 w-full scroll-mt-24 bg-white/[0.02]"
+          className="w-full scroll-mt-24 bg-black"
         >
-          <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-            <div className="text-left">
-              <div className="text-xs font-medium tracking-wide text-white/60">
-                Programs
-              </div>
-              <div className="mt-2 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur sm:p-8">
-                <Programs />
-              </div>
-            </div>
-          </div>
+          <Programs />
         </section>
       </div>
     </main>
