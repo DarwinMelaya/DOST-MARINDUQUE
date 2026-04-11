@@ -103,7 +103,10 @@ const Programs = () => {
   };
 
   return (
-    <section className="relative min-h-screen w-full overflow-hidden border-y border-white/10 bg-black/40 py-10 backdrop-blur sm:py-14">
+    <section
+      id="assistance"
+      className="relative min-h-screen w-full scroll-mt-24 overflow-hidden border-y border-white/10 bg-black/40 py-10 backdrop-blur sm:py-14"
+    >
       <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:radial-gradient(rgba(34,211,238,.20)_1px,transparent_1px)] [background-size:20px_20px]" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(167,139,250,.12),transparent_55%)]" />
 

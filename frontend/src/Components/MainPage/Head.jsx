@@ -41,8 +41,7 @@ const Head = () => {
           </h1>
 
           <p className="mt-5 max-w-2xl text-pretty text-base leading-relaxed text-white/80 sm:text-lg">
-            Modern, secure, and data-driven workflows—designed with a technology-first
-            experience while keeping the DOST identity front and center.
+            Empowering Marinduque through Science, Technology, and Innovation
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -53,10 +52,10 @@ const Head = () => {
               Explore Programs
             </a>
             <a
-              href="#map"
+              href="#assistance"
               className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white/90 backdrop-blur transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#FDB913]/70 focus:ring-offset-2 focus:ring-offset-[#07162C]"
             >
-              View Map
+              Apply for Assistance
             </a>
           </div>
 

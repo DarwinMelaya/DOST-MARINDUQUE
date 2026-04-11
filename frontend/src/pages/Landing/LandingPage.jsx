@@ -9,25 +9,12 @@ const LandingPage = () => {
       <div className="w-full">
         <Head />
 
-        <section
-          id="map"
-          className="w-full scroll-mt-24 bg-black"
-        >
+        <section id="map" className="w-full scroll-mt-24 bg-black">
           <Map />
         </section>
 
-        <section
-          id="programs"
-          className="w-full scroll-mt-24 bg-black"
-        >
+        <section id="programs" className="w-full scroll-mt-24 bg-black">
           <Programs />
-        </section>
-
-        <section
-          id="organizational-structure"
-          className="w-full scroll-mt-24 bg-black"
-        >
-          <OrganizationalStructure />
         </section>
       </div>
     </main>
