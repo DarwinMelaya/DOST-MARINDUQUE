@@ -1,13 +1,17 @@
 import Head from "../../Components/MainPage/Head";
 import Map from "../../Components/MainPage/Map";
 import Programs from "../../Components/MainPage/Programs";
-import OrganizationalStructure from "../../Components/MainPage/OrganizationalStructure";
+import Announcements from "../../Components/MainPage/Announcements";
 
 const LandingPage = () => {
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <div className="w-full">
         <Head />
+
+        <section id="announcements" className="w-full scroll-mt-24 bg-black">
+          <Announcements />
+        </section>
 
         <section id="map" className="w-full scroll-mt-24 bg-black">
           <Map />
