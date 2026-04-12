@@ -1,4 +1,12 @@
 {
+  "name": "dost-marinduque-backend",
+  "private": true,
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.103.0",
     "bcryptjs": "^3.0.3",
