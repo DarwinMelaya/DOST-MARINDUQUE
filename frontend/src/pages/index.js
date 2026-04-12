@@ -7,4 +7,4 @@ export { default as SignUp } from "./Auth/SignUp";
 
 // Admin
 export { default as Dashboard } from "./Admin/Dashboard";
-export { default as Programs } from "./Admin/Programs";
+export { default as AdminPrograms } from "./Admin/AdminPrograms";

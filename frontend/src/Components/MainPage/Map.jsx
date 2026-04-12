@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Circle,
   MapContainer,
@@ -9,55 +9,39 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 
-import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
-import markerIcon from "leaflet/dist/images/marker-icon.png";
-import markerShadow from "leaflet/dist/images/marker-shadow.png";
+import { fetchProjects } from "../../api/projectsApi";
+import {
+  PROGRAM_STYLES,
+  createProgramDivIcon,
+  fixLeafletDefaultIcons,
+} from "../Map/programMarkers";
 
-const PROGRAM_STYLES = {
-  SSCP: {
-    label: "SSCP",
-    color: "#22D3EE", // cyan
-    glow: "shadow-[0_0_18px_rgba(34,211,238,.55)]",
-  },
-  CEST: {
-    label: "CEST",
-    color: "#FDB913", // DOST yellow
-    glow: "shadow-[0_0_18px_rgba(253,185,19,.45)]",
-  },
-  SETUP: {
-    label: "SETUP",
-    color: "#A78BFA", // violet
-    glow: "shadow-[0_0_18px_rgba(167,139,250,.45)]",
-  },
-  GIA: {
-    label: "GIA",
-    color: "#34D399", // emerald
-    glow: "shadow-[0_0_18px_rgba(52,211,153,.45)]",
-  },
-};
-
-function createProgramDivIcon({ label, color }) {
-  const safeLabel = String(label ?? "").slice(0, 6);
-
-  return L.divIcon({
-    className: "dost-program-marker",
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -14],
-    html: `
-      <div class="relative h-7 w-7">
-        <span class="absolute inset-0 rounded-full opacity-35 motion-safe:animate-ping" style="background:${color};"></span>
-        <span class="absolute inset-0 rounded-full opacity-30 blur-[2px]" style="background:${color};"></span>
-        <span class="absolute inset-[5px] rounded-full shadow-[0_0_16px_rgba(255,255,255,.12)] motion-safe:animate-pulse" style="background:${color};"></span>
-        <span class="absolute inset-0 grid place-items-center text-[9px] font-extrabold tracking-wide text-white drop-shadow-[0_0_10px_rgba(0,0,0,.85)]">
-          ${safeLabel}
-        </span>
-      </div>
-    `.trim(),
-  });
+function projectsToMapSites(list) {
+  if (!Array.isArray(list)) return [];
+  return list
+    .filter((p) => {
+      const lat = p.location?.latitude;
+      const lng = p.location?.longitude;
+      return (
+        lat != null &&
+        lng != null &&
+        !Number.isNaN(Number(lat)) &&
+        !Number.isNaN(Number(lng))
+      );
+    })
+    .map((p) => ({
+      id: p.id,
+      program: p.programType,
+      name: p.title,
+      municipality: p.beneficiary,
+      status: p.projectStatus,
+      description: p.briefDescription,
+      coordinates: [Number(p.location.latitude), Number(p.location.longitude)],
+    }));
 }
 
 const Map = () => {
+  const [programSites, setProgramSites] = useState([]);
   // Marinduque (approximate) focus area
   const bounds = useMemo(
     () =>
@@ -71,64 +55,23 @@ const Map = () => {
   // Boac (provincial capital) as focal point
   const center = useMemo(() => L.latLng(13.4463, 122.0837), []);
 
-  const programSites = useMemo(
-    () => [
-      // NOTE: Sample/demo data only (approximate coordinates for styling/testing)
-      {
-        id: "sscp-1",
-        program: "SSCP",
-        name: "SSCP Site A",
-        municipality: "Boac",
-        coordinates: [13.4463, 122.0837],
-      },
-      {
-        id: "sscp-2",
-        program: "SSCP",
-        name: "SSCP Site B",
-        municipality: "Mogpog",
-        coordinates: [13.4946, 121.8652],
-      },
-      {
-        id: "cest-1",
-        program: "CEST",
-        name: "CEST Community Hub",
-        municipality: "Gasan",
-        coordinates: [13.3269, 121.8474],
-      },
-      {
-        id: "setup-1",
-        program: "SETUP",
-        name: "SETUP Partner MSME",
-        municipality: "Santa Cruz",
-        coordinates: [13.4762, 122.0276],
-      },
-      {
-        id: "gia-1",
-        program: "GIA",
-        name: "GIA Assisted Group",
-        municipality: "Torrijos",
-        coordinates: [13.3167, 122.0856],
-      },
-      {
-        id: "setup-2",
-        program: "SETUP",
-        name: "SETUP Facility Upgrade",
-        municipality: "Buenavista",
-        coordinates: [13.2556, 122.0468],
-      },
-    ],
-    []
-  );
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await fetchProjects();
+        if (!cancelled) setProgramSites(projectsToMapSites(list));
+      } catch {
+        if (!cancelled) setProgramSites([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
-    // Fix default marker icons in Vite/React bundlers
-    // eslint-disable-next-line no-underscore-dangle
-    delete L.Icon.Default.prototype._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: markerIcon2x,
-      iconUrl: markerIcon,
-      shadowUrl: markerShadow,
-    });
+    fixLeafletDefaultIcons();
   }, []);
 
   return (
@@ -147,7 +90,7 @@ const Map = () => {
         </div>
         <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 sm:inline-flex">
           <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,.65)]" />
-          Locked bounds
+          {programSites.length} site{programSites.length === 1 ? "" : "s"}
         </div>
       </div>
 
@@ -198,32 +141,25 @@ const Map = () => {
                   <span style={{ opacity: 0.85 }}>• {site.name}</span>
                 </Tooltip>
                 <Popup>
-                  <div style={{ minWidth: 220 }}>
+                  <div style={{ minWidth: 220, color: "#0f172a" }}>
                     <div style={{ fontWeight: 800 }}>{site.name}</div>
-                    <div style={{ marginTop: 6, opacity: 0.85 }}>
+                    <div style={{ marginTop: 6, opacity: 0.9, fontSize: 13 }}>
                       Program: <b>{site.program}</b>
                       <br />
-                      Municipality: <b>{site.municipality}</b>
+                      Beneficiary: <b>{site.municipality}</b>
+                      <br />
+                      Status: <b>{site.status ?? "—"}</b>
                     </div>
-                    <div style={{ marginTop: 8, fontSize: 12, opacity: 0.7 }}>
-                      Sample marker for UI/design demo.
-                    </div>
+                    {site.description ? (
+                      <div style={{ marginTop: 8, fontSize: 12, opacity: 0.8 }}>
+                        {site.description}
+                      </div>
+                    ) : null}
                   </div>
                 </Popup>
               </Marker>
             );
           })}
-
-          <Marker position={center}>
-            <Popup>
-              <div style={{ minWidth: 180 }}>
-                <div style={{ fontWeight: 700 }}>Marinduque (Boac)</div>
-                <div style={{ opacity: 0.8, marginTop: 4 }}>
-                  Focused technology map view.
-                </div>
-              </div>
-            </Popup>
-          </Marker>
         </MapContainer>
 
         <div className="pointer-events-none absolute left-4 top-4 z-[500] hidden sm:block">

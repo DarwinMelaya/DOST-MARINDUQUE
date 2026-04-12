@@ -1,105 +1,91 @@
+import { useEffect, useState } from "react";
+
+import { getApiErrorMessage } from "../../api/client";
+import { fetchProjects } from "../../api/projectsApi";
+
+const STATIC_PROGRAMS = [
+  {
+    code: "SSCP",
+    name: "Small Enterprise Technology Upgrading Program (SETUP) — Community/Cluster Support (SSCP)",
+    color: "#22D3EE",
+    blurb:
+      "Support for community-based / cluster initiatives with tech-enabled systems and capability building.",
+  },
+  {
+    code: "CEST",
+    name: "Community Empowerment through Science and Technology (CEST)",
+    color: "#FDB913",
+    blurb:
+      "Science and technology interventions to uplift communities through appropriate, sustainable solutions.",
+  },
+  {
+    code: "SETUP",
+    name: "Small Enterprise Technology Upgrading Program (SETUP)",
+    color: "#A78BFA",
+    blurb:
+      "Technology upgrading assistance for MSMEs to improve productivity, quality, and competitiveness.",
+  },
+  {
+    code: "GIA",
+    name: "Grants-in-Aid (GIA)",
+    color: "#34D399",
+    blurb:
+      "Financial support for S&T projects that enable innovation, resiliency, and inclusive development.",
+  },
+];
+
 const Programs = () => {
-  const programs = [
-    {
-      code: "SSCP",
-      name: "Small Enterprise Technology Upgrading Program (SETUP) — Community/Cluster Support (SSCP)",
-      color: "#22D3EE",
-      blurb:
-        "Support for community-based / cluster initiatives with tech-enabled systems and capability building.",
-    },
-    {
-      code: "CEST",
-      name: "Community Empowerment through Science and Technology (CEST)",
-      color: "#FDB913",
-      blurb:
-        "Science and technology interventions to uplift communities through appropriate, sustainable solutions.",
-    },
-    {
-      code: "SETUP",
-      name: "Small Enterprise Technology Upgrading Program (SETUP)",
-      color: "#A78BFA",
-      blurb:
-        "Technology upgrading assistance for MSMEs to improve productivity, quality, and competitiveness.",
-    },
-    {
-      code: "GIA",
-      name: "Grants-in-Aid (GIA)",
-      color: "#34D399",
-      blurb:
-        "Financial support for S&T projects that enable innovation, resiliency, and inclusive development.",
-    },
-  ];
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
-  const projects = [
-    {
-      id: "proj-sscp-001",
-      program: "SSCP",
-      title: "Digital Inventory + QR Tracking for Community Producers",
-      municipality: "Boac",
-      year: 2025,
-      status: "Ongoing",
-      tags: ["QR", "Inventory", "Training"],
-    },
-    {
-      id: "proj-sscp-002",
-      program: "SSCP",
-      title: "Process Improvement for Food Processing Cluster",
-      municipality: "Mogpog",
-      year: 2024,
-      status: "Completed",
-      tags: ["QA", "Workflow", "Equipment"],
-    },
-    {
-      id: "proj-cest-001",
-      program: "CEST",
-      title: "Tech-based Community Learning Hub & Tools",
-      municipality: "Gasan",
-      year: 2025,
-      status: "Ongoing",
-      tags: ["STEM", "Community", "Capacity"],
-    },
-    {
-      id: "proj-setup-001",
-      program: "SETUP",
-      title: "MSME Facility Upgrade (Packaging + Quality Control)",
-      municipality: "Santa Cruz",
-      year: 2024,
-      status: "Ongoing",
-      tags: ["Packaging", "QC", "Productivity"],
-    },
-    {
-      id: "proj-gia-001",
-      program: "GIA",
-      title: "S&T Assistance for Resilient Livelihood Systems",
-      municipality: "Torrijos",
-      year: 2025,
-      status: "Pipeline",
-      tags: ["Resiliency", "Innovation", "Pilot"],
-    },
-    {
-      id: "proj-setup-002",
-      program: "SETUP",
-      title: "Automation Starter Kit for Production Monitoring",
-      municipality: "Buenavista",
-      year: 2023,
-      status: "Completed",
-      tags: ["Monitoring", "Sensors", "Analytics"],
-    },
-  ];
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await fetchProjects();
+        if (!cancelled) {
+          setProjects(list);
+          setLoadError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(getApiErrorMessage(err, "Could not load projects."));
+          setProjects([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  const programMeta = Object.fromEntries(programs.map((p) => [p.code, p]));
+  const programMeta = Object.fromEntries(
+    STATIC_PROGRAMS.map((p) => [p.code, p])
+  );
 
   const statusClass = (status) => {
     switch (status) {
       case "Completed":
+      case "Graduated":
         return "bg-emerald-400/10 text-emerald-200 ring-1 ring-emerald-400/20";
       case "Ongoing":
         return "bg-cyan-400/10 text-cyan-200 ring-1 ring-cyan-400/20";
       case "Pipeline":
         return "bg-violet-400/10 text-violet-200 ring-1 ring-violet-400/20";
+      case "Terminated":
+        return "bg-rose-400/10 text-rose-200 ring-1 ring-rose-400/20";
       default:
         return "bg-white/5 text-white/80 ring-1 ring-white/10";
     }
+  };
+
+  const yearFromRecord = (proj) => {
+    if (!proj.createdAt) return "—";
+    const d = new Date(proj.createdAt);
+    return Number.isNaN(d.getTime()) ? "—" : String(d.getFullYear());
   };
 
   return (
@@ -117,11 +103,11 @@ const Programs = () => {
               Programs
             </div>
             <div className="mt-1 text-xl font-semibold text-white sm:text-2xl">
-              DOST-MARINDUQUE Programs & Sample Projects
+              DOST-MARINDUQUE Programs &amp; projects
             </div>
             <div className="mt-2 max-w-2xl text-sm leading-relaxed text-white/70">
-              Below is a starter list of core programs and example projects for UI/demo
-              purposes. You can replace these with real records from your database later.
+              Program descriptions below are reference material. Project cards load
+              from the database (same records added in the admin area).
             </div>
           </div>
 
@@ -133,12 +119,12 @@ const Programs = () => {
               />
               <span className="relative h-2.5 w-2.5 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,.65)] motion-safe:animate-pulse" />
             </span>
-            Tech-styled cards
+            Live data
           </div>
         </div>
 
         <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {programs.map((p) => (
+          {STATIC_PROGRAMS.map((p) => (
             <div
               key={p.code}
               className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur"
@@ -181,81 +167,94 @@ const Programs = () => {
 
         <div className="mt-8 flex items-center justify-between gap-3">
           <div className="text-left text-sm font-semibold text-white/90">
-            Sample projects
+            Projects
           </div>
           <div className="text-xs text-white/55">
-            {projects.length} items • demo data
+            {loading
+              ? "Loading…"
+              : loadError
+                ? "Could not load"
+                : `${projects.length} record${projects.length === 1 ? "" : "s"}`}
           </div>
         </div>
 
+        {loadError ? (
+          <p className="mt-4 rounded-xl border border-rose-500/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-100/95">
+            {loadError}
+          </p>
+        ) : null}
+
+        {!loading && !loadError && projects.length === 0 ? (
+          <p className="mt-4 text-sm text-white/55">
+            No projects in the database yet. Add entries from the admin Programs
+            page.
+          </p>
+        ) : null}
+
         <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {projects.map((proj) => {
-            const meta = programMeta[proj.program];
-            const accent = meta?.color ?? "#22D3EE";
-            return (
-              <article
-                key={proj.id}
-                className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-5 backdrop-blur transition hover:border-white/20"
-              >
-                <div
-                  className="pointer-events-none absolute -left-16 -top-16 h-40 w-40 rounded-full blur-3xl opacity-60 transition group-hover:opacity-80"
-                  style={{ background: `${accent}33` }}
-                />
+          {!loading &&
+            projects.map((proj) => {
+              const meta = programMeta[proj.programType];
+              const accent = meta?.color ?? "#22D3EE";
+              return (
+                <article
+                  key={proj.id}
+                  className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-white/[0.02] p-5 backdrop-blur transition hover:border-white/20"
+                >
+                  <div
+                    className="pointer-events-none absolute -left-16 -top-16 h-40 w-40 rounded-full blur-3xl opacity-60 transition group-hover:opacity-80"
+                    style={{ background: `${accent}33` }}
+                  />
 
-                <div className="relative flex items-start justify-between gap-3">
-                  <div className="text-left">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-2.5 py-1 text-[11px] font-semibold text-white/85"
-                      >
-                        <span className="relative inline-flex h-3 w-3 items-center justify-center">
-                          <span
-                            aria-hidden="true"
-                            className="absolute inline-flex h-3 w-3 rounded-full opacity-40 motion-safe:animate-ping"
-                            style={{ backgroundColor: accent }}
-                          />
-                          <span
-                            className="relative h-2.5 w-2.5 rounded-full motion-safe:animate-pulse"
-                            style={{ backgroundColor: accent }}
-                          />
+                  <div className="relative flex items-start justify-between gap-3">
+                    <div className="text-left">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/30 px-2.5 py-1 text-[11px] font-semibold text-white/85">
+                          <span className="relative inline-flex h-3 w-3 items-center justify-center">
+                            <span
+                              aria-hidden="true"
+                              className="absolute inline-flex h-3 w-3 rounded-full opacity-40 motion-safe:animate-ping"
+                              style={{ backgroundColor: accent }}
+                            />
+                            <span
+                              className="relative h-2.5 w-2.5 rounded-full motion-safe:animate-pulse"
+                              style={{ backgroundColor: accent }}
+                            />
+                          </span>
+                          {proj.programType}
                         </span>
-                        {proj.program}
-                      </span>
-                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClass(proj.status)}`}>
-                        {proj.status}
-                      </span>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusClass(proj.projectStatus)}`}
+                        >
+                          {proj.projectStatus}
+                        </span>
+                      </div>
+
+                      <h3 className="mt-3 text-pretty text-sm font-semibold text-white">
+                        {proj.title}
+                      </h3>
+
+                      <div className="mt-2 text-xs text-white/65">
+                        {proj.beneficiary} • {yearFromRecord(proj)}
+                      </div>
                     </div>
 
-                    <h3 className="mt-3 text-pretty text-sm font-semibold text-white">
-                      {proj.title}
-                    </h3>
-
-                    <div className="mt-2 text-xs text-white/65">
-                      {proj.municipality} • {proj.year}
-                    </div>
+                    <div
+                      className="mt-1 h-10 w-10 rounded-2xl border border-white/10 bg-white/5"
+                      style={{
+                        boxShadow: `0 0 0 1px rgba(255,255,255,.06), 0 18px 40px ${accent}22`,
+                      }}
+                    />
                   </div>
 
-                  <div
-                    className="mt-1 h-10 w-10 rounded-2xl border border-white/10 bg-white/5"
-                    style={{
-                      boxShadow: `0 0 0 1px rgba(255,255,255,.06), 0 18px 40px ${accent}22`,
-                    }}
-                  />
-                </div>
-
-                <div className="relative mt-4 flex flex-wrap gap-2">
-                  {proj.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="rounded-full border border-white/10 bg-black/25 px-2.5 py-1 text-[11px] font-medium text-white/70"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </article>
-            );
-          })}
+                  {proj.briefDescription ? (
+                    <p className="relative mt-3 line-clamp-3 text-[11px] leading-relaxed text-white/60">
+                      {proj.briefDescription}
+                    </p>
+                  ) : null}
+                </article>
+              );
+            })}
         </div>
       </div>
     </section>

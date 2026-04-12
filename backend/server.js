@@ -3,6 +3,11 @@ const cors = require("cors");
 const express = require("express");
 const connectDB = require("./config/db");
 const adminAuthRoutes = require("./routes/adminAuth");
+const requireAdmin = require("./middleware/requireAdmin");
+const {
+  listProjects,
+  createProject,
+} = require("./controllers/projectsController");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -28,9 +33,16 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api/auth/admin", adminAuthRoutes);
 
+// Register on `app` directly so POST /api/projects is always found (nested
+// Router + Express 5 can miss POST on some setups).
+app.get("/api/projects", listProjects);
+app.post("/api/projects", requireAdmin, createProject);
+
 (async () => {
   await connectDB();
   app.listen(PORT, () => {
     console.log(`API listening on http://localhost:${PORT}`);
+    console.log("  GET  /api/projects  (public)");
+    console.log("  POST /api/projects  (Authorization: Bearer <admin JWT>)");
   });
 })();

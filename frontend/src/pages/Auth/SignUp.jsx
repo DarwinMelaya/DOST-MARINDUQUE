@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { ADMIN_TOKEN_KEY, api } from "../../api/client";
+import { ADMIN_TOKEN_KEY } from "../../api/client";
+import { signupAdmin } from "../../api/authApi";
 import PasswordField from "./PasswordField";
 
 const SignUp = () => {
@@ -25,7 +26,7 @@ const SignUp = () => {
 
     setSubmitting(true);
     try {
-      const { data } = await api.post("/api/auth/admin/signup", {
+      const data = await signupAdmin({
         name,
         email,
         password,

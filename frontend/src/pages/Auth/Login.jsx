@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { ADMIN_TOKEN_KEY, api } from "../../api/client";
+import { ADMIN_TOKEN_KEY } from "../../api/client";
+import { loginAdmin } from "../../api/authApi";
 import PasswordField from "./PasswordField";
 
 const Login = () => {
@@ -14,7 +15,7 @@ const Login = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const { data } = await api.post("/api/auth/admin/login", {
+      const data = await loginAdmin({
         email,
         password,
       });

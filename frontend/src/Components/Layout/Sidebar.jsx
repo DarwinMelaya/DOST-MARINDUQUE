@@ -54,7 +54,7 @@ const Sidebar = () => {
           Dashboard
         </NavLink>
 
-        <NavLink to="/programs" className={navClass}>
+        <NavLink to="/admin-programs" className={navClass}>
           <span
             className="grid h-8 w-8 place-items-center rounded-lg bg-[#0054A6]/25 text-[#7dd3fc]"
             aria-hidden
