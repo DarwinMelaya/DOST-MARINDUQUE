@@ -11,6 +11,7 @@ import L from "leaflet";
 
 import { fetchProjects } from "../../api/projectsApi";
 import { useGeolocation } from "../../hooks/useGeolocation";
+import { getGoogleMapsDirectionsUrl } from "../../utils/googleMaps";
 import {
   PROGRAM_ORDER,
   countMapSitesByProgramType,
@@ -172,6 +173,46 @@ const Map = () => {
                         {site.description}
                       </div>
                     ) : null}
+                    <a
+                      href={getGoogleMapsDirectionsUrl(
+                        {
+                          lat: site.coordinates[0],
+                          lng: site.coordinates[1],
+                        },
+                        userLocation
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "inline-block",
+                        marginTop: 12,
+                        padding: "9px 14px",
+                        borderRadius: 8,
+                        background: "#0054A6",
+                        color: "#fff",
+                        fontWeight: 700,
+                        fontSize: 13,
+                        textDecoration: "none",
+                        textAlign: "center",
+                        width: "100%",
+                        boxSizing: "border-box",
+                      }}
+                    >
+                      Go
+                    </a>
+                    <p
+                      style={{
+                        marginTop: 8,
+                        fontSize: 11,
+                        lineHeight: 1.35,
+                        opacity: 0.72,
+                        color: "#334155",
+                      }}
+                    >
+                      {userLocation
+                        ? "Google Maps: from your current location to this pin."
+                        : "Google Maps opens to this site. Allow location on this page to route from where you are."}
+                    </p>
                   </div>
                 </Popup>
               </Marker>
