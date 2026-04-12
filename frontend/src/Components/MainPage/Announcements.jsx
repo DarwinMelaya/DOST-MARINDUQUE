@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-const SCHOLARSHIP_SLIDES = [
+import { fetchFeaturedAnnouncement } from "../../api/announcementsApi";
+import { getApiErrorMessage } from "../../api/client";
+
+const FALLBACK_SLIDES = [
   {
     src: `/Assets/Scholarship/${encodeURIComponent("Scholarship 1.jpg")}`,
     alt: "DOST scholarship campaign — JLSS outreach photo 1",
@@ -15,9 +18,189 @@ const SCHOLARSHIP_SLIDES = [
   },
 ];
 
+const FALLBACK_HASHTAGS = [
+  "DOSTMIMAROPA",
+  "dostmarinduque",
+  "OneDOST4U",
+  "onesolutionsopportunitiesforall",
+  "AghamnaRamdam",
+  "DOSTSEI",
+  "MagingDOSTIskolarKa",
+];
+
+function ApiArticleBody({ post }) {
+  const ctaOk = post.ctaLabel?.trim() && post.ctaUrl?.trim();
+  return (
+    <>
+      <div className="space-y-4 text-left text-sm leading-relaxed text-white/80">
+        {post.bodyParagraphs.map((p, i) => (
+          <p key={i} className="whitespace-pre-wrap">
+            {p}
+          </p>
+        ))}
+      </div>
+
+      {ctaOk ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <a
+            href={post.ctaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center rounded-xl bg-[#0054A6] px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,84,166,.35)] transition hover:bg-[#0A5EC0] focus:outline-none focus:ring-2 focus:ring-cyan-300/60 focus:ring-offset-2 focus:ring-offset-[#0a1628]"
+          >
+            {post.ctaLabel.trim()}
+          </a>
+        </div>
+      ) : null}
+
+      {post.hashtags?.length > 0 ? (
+        <div className="mt-6 flex flex-wrap gap-2">
+          {post.hashtags.map((tag, i) => (
+            <span
+              key={`${tag}-${i}`}
+              className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[11px] font-medium text-white/65 transition hover:border-white/20 hover:text-white/80"
+            >
+              #{tag}
+            </span>
+          ))}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function StaticJlssArticleBody() {
+  return (
+    <>
+      <div className="space-y-4 text-left text-sm leading-relaxed text-white/80">
+        <p>
+          The{" "}
+          <strong className="font-semibold text-white">
+            Department of Science and Technology (DOST) Marinduque
+          </strong>{" "}
+          continues the{" "}
+          <strong className="font-semibold text-cyan-200/95">
+            2026 DOST-Science Education Institute (SEI) Junior Level Science Scholarship (JLSS)
+            Campaign
+          </strong>{" "}
+          at{" "}
+          <strong className="font-semibold text-white">
+            Marinduque State University (MarSU) Santa Cruz and Torrijos
+          </strong>{" "}
+          on <strong className="text-white">April 7, 2026</strong>, engaging incoming third-year
+          students.
+        </p>
+        <p>
+          Following its campaign at MarSU Boac and Gasan campuses on{" "}
+          <strong className="text-white">April 6, 2026</strong>, the session provided an overview
+          of the scholarship. This includes eligibility, benefits, document requirements and
+          application details, helping students better understand the opportunity.
+        </p>
+        <p>
+          The{" "}
+          <strong className="font-semibold text-[#FDB913]/95">JLSS</strong> is a scholarship
+          program that supports deserving students in pursuing degrees in science and technology,
+          helping ease financial burdens while encouraging academic excellence.
+        </p>
+        <p className="rounded-xl border border-cyan-400/20 bg-cyan-400/5 p-4 text-white/85">
+          <strong className="font-semibold text-cyan-200">Registration</strong> opens on{" "}
+          <strong className="text-white">April 13, 2026</strong> through the official portal:
+        </p>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <a
+          href="https://jlss.science-scholarships.ph/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center rounded-xl bg-[#0054A6] px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,84,166,.35)] transition hover:bg-[#0A5EC0] focus:outline-none focus:ring-2 focus:ring-cyan-300/60 focus:ring-offset-2 focus:ring-offset-[#0a1628]"
+        >
+          Open JLSS portal
+        </a>
+        <span className="text-xs text-white/45 break-all sm:break-normal">
+          jlss.science-scholarships.ph
+        </span>
+      </div>
+
+      <div className="mt-6 flex flex-wrap gap-2">
+        {FALLBACK_HASHTAGS.map((tag) => (
+          <span
+            key={tag}
+            className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[11px] font-medium text-white/65 transition hover:border-white/20 hover:text-white/80"
+          >
+            #{tag}
+          </span>
+        ))}
+      </div>
+    </>
+  );
+}
+
 const Announcements = () => {
+  const [apiPost, setApiPost] = useState(null);
+  const [fetchFailed, setFetchFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const announcement = await fetchFeaturedAnnouncement();
+        if (!cancelled) {
+          setApiPost(announcement);
+          setFetchFailed(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.warn(getApiErrorMessage(err, "Announcement fetch failed."));
+          setApiPost(null);
+          setFetchFailed(true);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const post = apiPost;
+  const useApi = Boolean(
+    post?.title?.trim() &&
+      Array.isArray(post.images) &&
+      post.images.length > 0 &&
+      Array.isArray(post.bodyParagraphs) &&
+      post.bodyParagraphs.length > 0
+  );
+
+  const slides = useMemo(() => {
+    if (!useApi) return FALLBACK_SLIDES;
+    return post.images.map((img) => ({
+      src: img.url,
+      alt: img.alt?.trim() || post.title || "Announcement image",
+    }));
+  }, [useApi, post]);
+
+  const highlightLabel = useApi
+    ? post.highlightLabel || "Today's highlight"
+    : "Today's highlight";
+  const title = useApi
+    ? post.title
+    : "2026 DOST-SEI JLSS Campaign Reaches MarSU Santa Cruz and Torrijos";
+  const subtitle = useApi
+    ? post.subtitle?.trim()
+    : "Science education outreach • Scholarship information session";
+  const displayDate = useApi ? post.displayDate?.trim() || "—" : "April 7, 2026";
+  const badge = useApi ? post.badge?.trim() || "Announcement" : "DOST-SEI • JLSS 2026";
+  const carouselCaption = useApi
+    ? post.carouselCaption?.trim() ||
+      "Marinduque State University — Santa Cruz & Torrijos campuses"
+    : "Marinduque State University — Santa Cruz & Torrijos campuses";
+
   const [slideIndex, setSlideIndex] = useState(0);
-  const total = SCHOLARSHIP_SLIDES.length;
+  const total = slides.length;
+
+  useEffect(() => {
+    setSlideIndex((i) => (total > 0 ? Math.min(i, total - 1) : 0));
+  }, [total]);
 
   const goNext = useCallback(() => {
     setSlideIndex((i) => (i + 1) % total);
@@ -32,16 +215,6 @@ const Announcements = () => {
     return () => window.clearInterval(id);
   }, [goNext]);
 
-  const hashtags = [
-    "DOSTMIMAROPA",
-    "dostmarinduque",
-    "OneDOST4U",
-    "onesolutionsopportunitiesforall",
-    "AghamnaRamdam",
-    "DOSTSEI",
-    "MagingDOSTIskolarKa",
-  ];
-
   return (
     <div className="relative min-h-0 w-full overflow-hidden border-y border-white/10 bg-black/40 py-10 backdrop-blur sm:py-14">
       <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:linear-gradient(to_right,rgba(99,179,237,.22)_1px,transparent_1px),linear-gradient(to_bottom,rgba(99,179,237,.18)_1px,transparent_1px)] [background-size:44px_44px]" />
@@ -49,6 +222,12 @@ const Announcements = () => {
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_80%_100%,rgba(0,84,166,.18),transparent_55%)]" />
 
       <div className="relative mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+        {fetchFailed ? (
+          <p className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-center text-xs text-amber-100/90 sm:text-left">
+            Could not load the latest highlight from the server; showing the default story.
+          </p>
+        ) : null}
+
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="text-left">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#FDB913]/30 bg-[#FDB913]/10 px-3 py-1.5 text-xs font-semibold tracking-wide text-[#FDB913] backdrop-blur">
@@ -59,21 +238,21 @@ const Announcements = () => {
                 />
                 <span className="relative h-2 w-2 rounded-full bg-[#FDB913] shadow-[0_0_14px_rgba(253,185,19,.7)]" />
               </span>
-              Today&apos;s highlight
+              {highlightLabel}
             </div>
             <h2 className="mt-3 text-pretty text-xl font-semibold tracking-tight text-white sm:text-2xl lg:text-3xl">
               <span className="bg-gradient-to-r from-white via-cyan-100 to-white/90 bg-clip-text text-transparent">
-                2026 DOST-SEI JLSS Campaign Reaches MarSU Santa Cruz and Torrijos
+                {title}
               </span>
             </h2>
-            <p className="mt-2 max-w-2xl text-sm text-white/60">
-              Science education outreach • Scholarship information session
-            </p>
+            {subtitle ? (
+              <p className="mt-2 max-w-2xl text-sm text-white/60">{subtitle}</p>
+            ) : null}
           </div>
 
           <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/75 backdrop-blur">
             <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(34,211,238,.55)]" />
-            April 7, 2026
+            {displayDate}
           </div>
         </div>
 
@@ -91,14 +270,14 @@ const Announcements = () => {
             <div
               className="group/carousel relative min-h-[220px] lg:min-h-[320px]"
               aria-roledescription="carousel"
-              aria-label="Scholarship campaign photos"
+              aria-label="Highlight photos"
             >
               <div className="absolute inset-0 overflow-hidden">
                 <div
                   className="flex h-full w-full transition-transform duration-500 ease-out motion-reduce:transition-none"
                   style={{ transform: `translateX(-${slideIndex * 100}%)` }}
                 >
-                  {SCHOLARSHIP_SLIDES.map((slide) => (
+                  {slides.map((slide) => (
                     <div
                       key={slide.src}
                       className="relative h-full min-h-[220px] w-full min-w-full shrink-0 lg:min-h-[320px]"
@@ -161,7 +340,7 @@ const Announcements = () => {
               </button>
 
               <div className="pointer-events-auto absolute bottom-14 left-0 right-0 z-20 flex justify-center gap-1.5 px-4 sm:bottom-16">
-                {SCHOLARSHIP_SLIDES.map((_, i) => (
+                {slides.map((_, i) => (
                   <button
                     key={i}
                     type="button"
@@ -179,78 +358,16 @@ const Announcements = () => {
 
               <div className="pointer-events-none relative z-10 flex h-full flex-col justify-end p-6 sm:p-8">
                 <div className="rounded-xl border border-white/15 bg-black/35 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-cyan-200/90 backdrop-blur">
-                  DOST-SEI • JLSS 2026
+                  {badge}
                 </div>
                 <p className="mt-3 text-sm font-medium leading-relaxed text-white/90">
-                  Marinduque State University — Santa Cruz &amp; Torrijos campuses
+                  {carouselCaption}
                 </p>
               </div>
             </div>
 
             <div className="relative border-t border-white/10 p-6 sm:p-8 lg:border-l lg:border-t-0">
-              <div className="space-y-4 text-left text-sm leading-relaxed text-white/80">
-                <p>
-                  The{" "}
-                  <strong className="font-semibold text-white">
-                    Department of Science and Technology (DOST) Marinduque
-                  </strong>{" "}
-                  continues the{" "}
-                  <strong className="font-semibold text-cyan-200/95">
-                    2026 DOST-Science Education Institute (SEI) Junior Level Science Scholarship
-                    (JLSS) Campaign
-                  </strong>{" "}
-                  at{" "}
-                  <strong className="font-semibold text-white">
-                    Marinduque State University (MarSU) Santa Cruz and Torrijos
-                  </strong>{" "}
-                  on <strong className="text-white">April 7, 2026</strong>, engaging incoming
-                  third-year students.
-                </p>
-                <p>
-                  Following its campaign at MarSU Boac and Gasan campuses on{" "}
-                  <strong className="text-white">April 6, 2026</strong>, the session provided an
-                  overview of the scholarship. This includes eligibility, benefits, document
-                  requirements and application details, helping students better understand the
-                  opportunity.
-                </p>
-                <p>
-                  The{" "}
-                  <strong className="font-semibold text-[#FDB913]/95">JLSS</strong> is a
-                  scholarship program that supports deserving students in pursuing degrees in
-                  science and technology, helping ease financial burdens while encouraging
-                  academic excellence.
-                </p>
-                <p className="rounded-xl border border-cyan-400/20 bg-cyan-400/5 p-4 text-white/85">
-                  <strong className="font-semibold text-cyan-200">Registration</strong> opens on{" "}
-                  <strong className="text-white">April 13, 2026</strong> through the official
-                  portal:
-                </p>
-              </div>
-
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <a
-                  href="https://jlss.science-scholarships.ph/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center rounded-xl bg-[#0054A6] px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(0,84,166,.35)] transition hover:bg-[#0A5EC0] focus:outline-none focus:ring-2 focus:ring-cyan-300/60 focus:ring-offset-2 focus:ring-offset-[#0a1628]"
-                >
-                  Open JLSS portal
-                </a>
-                <span className="text-xs text-white/45 break-all sm:break-normal">
-                  jlss.science-scholarships.ph
-                </span>
-              </div>
-
-              <div className="mt-6 flex flex-wrap gap-2">
-                {hashtags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[11px] font-medium text-white/65 transition hover:border-white/20 hover:text-white/80"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
+              {useApi ? <ApiArticleBody post={post} /> : <StaticJlssArticleBody />}
             </div>
           </div>
         </article>
