@@ -8,3 +8,4 @@ export { default as SignUp } from "./Auth/SignUp";
 // Admin
 export { default as Dashboard } from "./Admin/Dashboard";
 export { default as AdminPrograms } from "./Admin/AdminPrograms";
+export { default as AdminPost } from "./Admin/AdminPost";

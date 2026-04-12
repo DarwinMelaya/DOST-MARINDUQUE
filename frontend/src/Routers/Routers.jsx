@@ -1,7 +1,14 @@
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import Layout from "../Components/Layout/Layout";
 import ProtectedRoute from "../Components/Security/ProtectedRoute";
-import { AdminPrograms, Dashboard, LandingPage, Login, SignUp } from "../pages";
+import {
+  AdminPrograms,
+  Dashboard,
+  LandingPage,
+  Login,
+  SignUp,
+  AdminPost,
+} from "../pages";
 
 export const Routers = () => {
   return (
@@ -15,6 +22,7 @@ export const Routers = () => {
           <Route element={<Layout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin-programs" element={<AdminPrograms />} />
+            <Route path="/admin-post" element={<AdminPost />} />
           </Route>
         </Route>
       </Routes>
