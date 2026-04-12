@@ -118,7 +118,7 @@ const Map = () => {
           maxZoom={15}
           maxBounds={bounds}
           maxBoundsViscosity={1.0}
-          scrollWheelZoom
+          scrollWheelZoom={false}
           attributionControl={false}
           className="h-full w-full"
         >

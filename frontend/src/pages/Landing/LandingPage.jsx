@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import Head from "../../Components/MainPage/Head";
 import About from "../../Components/MainPage/About";
 import ContactUs from "../../Components/MainPage/ContactUs";
@@ -5,7 +6,35 @@ import Map from "../../Components/MainPage/Map";
 import Programs from "../../Components/MainPage/Programs";
 import Announcements from "../../Components/MainPage/Announcements";
 
+const scrollToSection = (id) => {
+  document.getElementById(id)?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+};
+
 const LandingPage = () => {
+  const mapSectionRef = useRef(null);
+  const [mapNavVisible, setMapNavVisible] = useState(false);
+
+  useEffect(() => {
+    const el = mapSectionRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return undefined;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // Show controls habang malinaw na nakatingin sa map section (hindi lang dumaan).
+        setMapNavVisible(
+          entry.isIntersecting && entry.intersectionRatio >= 0.2
+        );
+      },
+      { threshold: [0, 0.2, 0.35, 0.5, 0.75, 1] }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <div className="w-full">
@@ -15,7 +44,11 @@ const LandingPage = () => {
           <Announcements />
         </section>
 
-        <section id="map" className="w-full scroll-mt-24 bg-black">
+        <section
+          id="map"
+          ref={mapSectionRef}
+          className="relative w-full scroll-mt-24 bg-black"
+        >
           <Map />
         </section>
 
@@ -30,6 +63,60 @@ const LandingPage = () => {
         <section id="contact" className="w-full scroll-mt-24 bg-black">
           <ContactUs />
         </section>
+      </div>
+
+      {/* Up/Down: kapag nasa map section, may explicit na scroll para hindi ma-trap ng map */}
+      <div
+        className={`pointer-events-none fixed right-4 top-1/2 z-[1000] flex -translate-y-1/2 flex-col gap-2 transition-opacity duration-200 sm:right-6 ${
+          mapNavVisible ? "opacity-100" : "invisible opacity-0"
+        }`}
+        aria-hidden={!mapNavVisible}
+      >
+        <div className="pointer-events-auto flex flex-col overflow-hidden rounded-2xl border border-white/15 bg-slate-950/90 shadow-[0_8px_30px_rgba(0,0,0,.45)] backdrop-blur-md">
+          <button
+            type="button"
+            onClick={() => scrollToSection("announcements")}
+            className="flex h-11 w-11 items-center justify-center text-white/90 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 sm:h-12 sm:w-12"
+            aria-label="Pumunta sa Announcements (taas)"
+            title="Taas — Announcements"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="h-6 w-6"
+              aria-hidden
+            >
+              <path
+                fillRule="evenodd"
+                d="M11.47 7.72a.75.75 0 0 1 1.06 0l5.25 5.25a.75.75 0 1 1-1.06 1.06L12 9.31l-4.72 4.72a.75.75 0 0 1-1.06-1.06l5.25-5.25Z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+          <span className="mx-2 h-px bg-white/10" />
+          <button
+            type="button"
+            onClick={() => scrollToSection("programs")}
+            className="flex h-11 w-11 items-center justify-center text-white/90 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 sm:h-12 sm:w-12"
+            aria-label="Pumunta sa Programs (ibaba)"
+            title="Ibaba — Programs"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="h-6 w-6"
+              aria-hidden
+            >
+              <path
+                fillRule="evenodd"
+                d="M12.53 16.28a.75.75 0 0 1-1.06 0l-5.25-5.25a.75.75 0 0 1 1.06-1.06L12 14.69l4.72-4.72a.75.75 0 1 1 1.06 1.06l-5.25 5.25Z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
     </main>
   );
