@@ -1,5 +1,6 @@
 import Head from "../../Components/MainPage/Head";
 import About from "../../Components/MainPage/About";
+import ContactUs from "../../Components/MainPage/ContactUs";
 import Map from "../../Components/MainPage/Map";
 import Programs from "../../Components/MainPage/Programs";
 import Announcements from "../../Components/MainPage/Announcements";
@@ -24,6 +25,10 @@ const LandingPage = () => {
 
         <section id="about" className="w-full scroll-mt-24 bg-black">
           <About />
+        </section>
+
+        <section id="contact" className="w-full scroll-mt-24 bg-black">
+          <ContactUs />
         </section>
       </div>
     </main>
