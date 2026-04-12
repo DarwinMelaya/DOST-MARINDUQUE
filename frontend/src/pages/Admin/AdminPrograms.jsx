@@ -5,6 +5,12 @@ import { getApiErrorMessage } from "../../api/client";
 import { createProject, fetchProjects } from "../../api/projectsApi";
 import AdminProgramMap from "../../Components/Admin/AdminProgramMap";
 import ProgramsModals from "../../Components/Modals/AdminModals/ProgramsModals";
+import { PROGRAM_STYLES } from "../../Components/Map/programMarkers";
+import {
+  PROGRAM_ORDER,
+  countProjectsByProgramType,
+  projectHasMapCoordinates,
+} from "../../utils/projectSites";
 
 const AdminPrograms = () => {
   const [projects, setProjects] = useState([]);
@@ -45,18 +51,13 @@ const AdminPrograms = () => {
     return { lat, lng };
   }, [pickLat, pickLng]);
 
+  const countsByProgram = useMemo(
+    () => countProjectsByProgramType(projects),
+    [projects]
+  );
+
   const withoutMapPin = useMemo(
-    () =>
-      projects.filter((p) => {
-        const lat = p.location?.latitude;
-        const lng = p.location?.longitude;
-        return (
-          lat == null ||
-          lng == null ||
-          Number.isNaN(lat) ||
-          Number.isNaN(lng)
-        );
-      }),
+    () => projects.filter((p) => !projectHasMapCoordinates(p)),
     [projects]
   );
 
@@ -111,6 +112,39 @@ const AdminPrograms = () => {
             >
               Add project
             </button>
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {PROGRAM_ORDER.map((key) => {
+              const style = PROGRAM_STYLES[key];
+              if (!style) return null;
+              const n = countsByProgram[key] ?? 0;
+              return (
+                <div
+                  key={key}
+                  className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 backdrop-blur"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{
+                        backgroundColor: style.color,
+                        boxShadow: `0 0 12px ${style.color}66`,
+                      }}
+                    />
+                    <span className="text-xs font-semibold tracking-wide text-white/70">
+                      {style.label}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-2xl font-semibold tabular-nums text-white">
+                    {n}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-white/45">
+                    {n === 1 ? "project" : "projects"} (all)
+                  </p>
+                </div>
+              );
+            })}
           </div>
 
           <div className="mt-8">

@@ -10,38 +10,42 @@ import {
 import L from "leaflet";
 
 import { fetchProjects } from "../../api/projectsApi";
+import { useGeolocation } from "../../hooks/useGeolocation";
+import {
+  PROGRAM_ORDER,
+  countMapSitesByProgramType,
+  projectsToMapSites,
+} from "../../utils/projectSites";
+import MapUserLocation from "../Map/MapUserLocation";
 import {
   PROGRAM_STYLES,
   createProgramDivIcon,
   fixLeafletDefaultIcons,
 } from "../Map/programMarkers";
 
-function projectsToMapSites(list) {
-  if (!Array.isArray(list)) return [];
-  return list
-    .filter((p) => {
-      const lat = p.location?.latitude;
-      const lng = p.location?.longitude;
-      return (
-        lat != null &&
-        lng != null &&
-        !Number.isNaN(Number(lat)) &&
-        !Number.isNaN(Number(lng))
-      );
-    })
-    .map((p) => ({
-      id: p.id,
-      program: p.programType,
-      name: p.title,
-      municipality: p.beneficiary,
-      status: p.projectStatus,
-      description: p.briefDescription,
-      coordinates: [Number(p.location.latitude), Number(p.location.longitude)],
-    }));
-}
-
 const Map = () => {
-  const [programSites, setProgramSites] = useState([]);
+  const geo = useGeolocation();
+  const userLocation =
+    geo.lat != null &&
+    geo.lng != null &&
+    !Number.isNaN(geo.lat) &&
+    !Number.isNaN(geo.lng)
+      ? {
+          lat: geo.lat,
+          lng: geo.lng,
+          accuracy: geo.accuracy,
+        }
+      : null;
+
+  const [projects, setProjects] = useState([]);
+  const programSites = useMemo(
+    () => projectsToMapSites(projects),
+    [projects]
+  );
+  const mapCountsByProgram = useMemo(
+    () => countMapSitesByProgramType(projects),
+    [projects]
+  );
   // Marinduque (approximate) focus area
   const bounds = useMemo(
     () =>
@@ -60,9 +64,9 @@ const Map = () => {
     (async () => {
       try {
         const list = await fetchProjects();
-        if (!cancelled) setProgramSites(projectsToMapSites(list));
+        if (!cancelled) setProjects(Array.isArray(list) ? list : []);
       } catch {
-        if (!cancelled) setProgramSites([]);
+        if (!cancelled) setProjects([]);
       }
     })();
     return () => {
@@ -88,9 +92,20 @@ const Map = () => {
             Marinduque, Philippines
           </div>
         </div>
-        <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 sm:inline-flex">
-          <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,.65)]" />
-          {programSites.length} site{programSites.length === 1 ? "" : "s"}
+        <div className="flex flex-col items-end gap-1">
+          <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 sm:inline-flex">
+            <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,.65)]" />
+            {programSites.length} site{programSites.length === 1 ? "" : "s"}
+          </div>
+          <div className="max-w-[min(100vw-2rem,240px)] text-right text-[10px] leading-tight text-white/50">
+            {geo.loading ? (
+              <span className="text-sky-300/90">Finding your location…</span>
+            ) : geo.error ? (
+              <span title={geo.error}>Location: {geo.error}</span>
+            ) : userLocation ? (
+              <span className="text-emerald-300/90">Your location is on the map</span>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -124,6 +139,8 @@ const Map = () => {
               fillOpacity: 0.18,
             }}
           />
+
+          <MapUserLocation position={userLocation} bounds={bounds} />
 
           {programSites.map((site) => {
             const style = PROGRAM_STYLES[site.program] ?? PROGRAM_STYLES.SSCP;
@@ -168,24 +185,31 @@ const Map = () => {
               Programs Legend
             </div>
             <div className="mt-2 grid gap-2">
-              {Object.entries(PROGRAM_STYLES).map(([key, v]) => (
-                <div key={key} className="flex items-center gap-2">
-                  <span className="relative inline-flex h-3 w-3 items-center justify-center">
-                    <span
-                      aria-hidden="true"
-                      className="absolute inline-flex h-3 w-3 rounded-full opacity-40 motion-safe:animate-ping"
-                      style={{ backgroundColor: v.color }}
-                    />
-                    <span
-                      className={`relative h-2.5 w-2.5 rounded-full ${v.glow} motion-safe:animate-pulse`}
-                      style={{ backgroundColor: v.color }}
-                    />
-                  </span>
-                  <span className="font-semibold text-white/90">{v.label}</span>
-                  <span className="text-white/50">•</span>
-                  <span className="text-white/65">Sites</span>
-                </div>
-              ))}
+              {PROGRAM_ORDER.map((key) => {
+                const v = PROGRAM_STYLES[key];
+                if (!v) return null;
+                const n = mapCountsByProgram[key] ?? 0;
+                return (
+                  <div key={key} className="flex items-center gap-2">
+                    <span className="relative inline-flex h-3 w-3 items-center justify-center">
+                      <span
+                        aria-hidden="true"
+                        className="absolute inline-flex h-3 w-3 rounded-full opacity-40 motion-safe:animate-ping"
+                        style={{ backgroundColor: v.color }}
+                      />
+                      <span
+                        className={`relative h-2.5 w-2.5 rounded-full ${v.glow} motion-safe:animate-pulse`}
+                        style={{ backgroundColor: v.color }}
+                      />
+                    </span>
+                    <span className="font-semibold text-white/90">{v.label}</span>
+                    <span className="text-white/50">•</span>
+                    <span className="tabular-nums text-white/80">
+                      {n} site{n === 1 ? "" : "s"} on map
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { useGeolocation } from "../../hooks/useGeolocation";
 import {
   Circle,
   MapContainer,
@@ -10,6 +11,12 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 
+import {
+  PROGRAM_ORDER,
+  countMapSitesByProgramType,
+  projectHasMapCoordinates,
+} from "../../utils/projectSites";
+import MapUserLocation from "../Map/MapUserLocation";
 import {
   PROGRAM_STYLES,
   createProgramDivIcon,
@@ -53,6 +60,19 @@ const AdminProgramMap = ({
   className = "",
   splitLayout = false,
 }) => {
+  const geo = useGeolocation();
+  const userLocation =
+    geo.lat != null &&
+    geo.lng != null &&
+    !Number.isNaN(geo.lat) &&
+    !Number.isNaN(geo.lng)
+      ? {
+          lat: geo.lat,
+          lng: geo.lng,
+          accuracy: geo.accuracy,
+        }
+      : null;
+
   const rootSplit = splitLayout ? "h-full min-h-0 flex flex-col" : "";
   const bounds = useMemo(
     () =>
@@ -65,18 +85,15 @@ const AdminProgramMap = ({
 
   const center = useMemo(() => L.latLng(13.4463, 122.0837), []);
 
-  const sitesOnMap = useMemo(() => {
-    return projects.filter((p) => {
-      const lat = p.location?.latitude;
-      const lng = p.location?.longitude;
-      return (
-        typeof lat === "number" &&
-        !Number.isNaN(lat) &&
-        typeof lng === "number" &&
-        !Number.isNaN(lng)
-      );
-    });
-  }, [projects]);
+  const sitesOnMap = useMemo(
+    () => projects.filter(projectHasMapCoordinates),
+    [projects]
+  );
+
+  const mapCountsByProgram = useMemo(
+    () => countMapSitesByProgramType(projects),
+    [projects]
+  );
 
   useEffect(() => {
     fixLeafletDefaultIcons();
@@ -109,9 +126,20 @@ const AdminProgramMap = ({
               : "Marinduque — saved projects"}
           </div>
         </div>
-        <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 sm:inline-flex">
-          <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,.65)]" />
-          {sitesOnMap.length} on map
+        <div className="flex flex-col items-end gap-1">
+          <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 sm:inline-flex">
+            <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,.65)]" />
+            {sitesOnMap.length} on map
+          </div>
+          <div className="max-w-[min(100vw-2rem,240px)] text-right text-[10px] leading-tight text-white/50">
+            {geo.loading ? (
+              <span className="text-sky-300/90">Finding your location…</span>
+            ) : geo.error ? (
+              <span title={geo.error}>Location: {geo.error}</span>
+            ) : userLocation ? (
+              <span className="text-emerald-300/90">Your location is on the map</span>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -154,6 +182,8 @@ const AdminProgramMap = ({
               fillOpacity: 0.18,
             }}
           />
+
+          <MapUserLocation position={userLocation} bounds={bounds} />
 
           {sitesOnMap.map((site) => {
             const style =
@@ -234,24 +264,31 @@ const AdminProgramMap = ({
               Programs legend
             </div>
             <div className="mt-2 grid gap-2">
-              {Object.entries(PROGRAM_STYLES).map(([key, v]) => (
-                <div key={key} className="flex items-center gap-2">
-                  <span className="relative inline-flex h-3 w-3 items-center justify-center">
-                    <span
-                      aria-hidden="true"
-                      className="absolute inline-flex h-3 w-3 rounded-full opacity-40 motion-safe:animate-ping"
-                      style={{ backgroundColor: v.color }}
-                    />
-                    <span
-                      className={`relative h-2.5 w-2.5 rounded-full ${v.glow} motion-safe:animate-pulse`}
-                      style={{ backgroundColor: v.color }}
-                    />
-                  </span>
-                  <span className="font-semibold text-white/90">{v.label}</span>
-                  <span className="text-white/50">•</span>
-                  <span className="text-white/65">Sites</span>
-                </div>
-              ))}
+              {PROGRAM_ORDER.map((key) => {
+                const v = PROGRAM_STYLES[key];
+                if (!v) return null;
+                const n = mapCountsByProgram[key] ?? 0;
+                return (
+                  <div key={key} className="flex items-center gap-2">
+                    <span className="relative inline-flex h-3 w-3 items-center justify-center">
+                      <span
+                        aria-hidden="true"
+                        className="absolute inline-flex h-3 w-3 rounded-full opacity-40 motion-safe:animate-ping"
+                        style={{ backgroundColor: v.color }}
+                      />
+                      <span
+                        className={`relative h-2.5 w-2.5 rounded-full ${v.glow} motion-safe:animate-pulse`}
+                        style={{ backgroundColor: v.color }}
+                      />
+                    </span>
+                    <span className="font-semibold text-white/90">{v.label}</span>
+                    <span className="text-white/50">•</span>
+                    <span className="tabular-nums text-white/80">
+                      {n} on map
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
