@@ -20,7 +20,7 @@ const Login = () => {
       });
       localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
       toast.success("Signed in successfully.");
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       const message =
         err.response?.data?.message ?? "Login failed. Please try again.";

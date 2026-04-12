@@ -32,7 +32,7 @@ const SignUp = () => {
       });
       localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
       toast.success("Admin account created.");
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       const message =
         err.response?.data?.message ?? "Signup failed. Please try again.";
