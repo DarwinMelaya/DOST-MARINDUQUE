@@ -31,6 +31,16 @@ const PORT = Number(process.env.PORT) || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 
+function parseAllowedOrigins(v) {
+  if (!v) return [];
+  return String(v)
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+const allowedOrigins = parseAllowedOrigins(CLIENT_ORIGIN);
+
 if (!JWT_SECRET) {
   console.error("Missing JWT_SECRET in environment.");
   process.exit(1);
@@ -38,7 +48,13 @@ if (!JWT_SECRET) {
 
 app.use(
   cors({
-    origin: CLIENT_ORIGIN,
+    origin(origin, cb) {
+      // Non-browser requests (curl, server-to-server) have no origin.
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.length === 0) return cb(null, false);
+      if (allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error("Not allowed by CORS"));
+    },
     credentials: true,
   })
 );
