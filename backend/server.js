@@ -51,13 +51,27 @@ app.use(
     origin(origin, cb) {
       // Non-browser requests (curl, server-to-server) have no origin.
       if (!origin) return cb(null, true);
+      if (allowedOrigins.includes("*")) return cb(null, true);
       if (allowedOrigins.length === 0) return cb(null, false);
       if (allowedOrigins.includes(origin)) return cb(null, true);
-      return cb(new Error("Not allowed by CORS"));
+      const err = new Error("Not allowed by CORS");
+      err.code = "CORS_NOT_ALLOWED";
+      return cb(err);
     },
     credentials: true,
   })
 );
+
+// Make CORS failures explicit (avoid confusing 500s).
+app.use((err, _req, res, next) => {
+  if (err && err.code === "CORS_NOT_ALLOWED") {
+    return res.status(403).json({
+      message:
+        "CORS blocked this request. Set CLIENT_ORIGIN to your frontend URL (comma-separated allowed).",
+    });
+  }
+  next(err);
+});
 app.use(express.json());
 
 app.get("/api/health", (req, res) => {
