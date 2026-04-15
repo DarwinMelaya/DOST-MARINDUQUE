@@ -9,17 +9,61 @@ const navClass = ({ isActive }) =>
       : "text-white/65 hover:bg-white/5 hover:text-white",
   ].join(" ");
 
-const Sidebar = () => {
+const Sidebar = ({ mobileOpen = false, onClose }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.removeItem(ADMIN_TOKEN_KEY);
     navigate("/login", { replace: true });
+    onClose?.();
   };
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col border-r border-white/10 bg-black/40 backdrop-blur-sm">
+    <>
+      <div
+        className={[
+          "fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-opacity md:hidden",
+          mobileOpen ? "opacity-100" : "pointer-events-none opacity-0",
+        ].join(" ")}
+        onClick={() => onClose?.()}
+        aria-hidden={!mobileOpen}
+      />
+      <aside
+        className={[
+          "z-50 flex w-64 shrink-0 flex-col border-r border-white/10 bg-black/40 backdrop-blur-sm",
+          "fixed inset-y-0 left-0 md:sticky md:top-0 md:h-screen",
+          "transition-transform duration-200 md:translate-x-0",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+        ].join(" ")}
+        aria-label="Sidebar navigation"
+      >
       <div className="border-b border-white/10 px-5 py-6">
+        <div className="mb-4 flex items-center justify-between md:hidden">
+          <span className="text-xs font-semibold tracking-wide text-white/65">
+            Menu
+          </span>
+          <button
+            type="button"
+            onClick={() => onClose?.()}
+            className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 p-2 text-white/90 transition hover:bg-white/10"
+            aria-label="Close menu"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-5 w-5"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
         <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium tracking-wide text-white/75">
           <span className="h-1.5 w-1.5 rounded-full bg-[#FDB913] shadow-[0_0_12px_rgba(253,185,19,.6)]" />
           Admin
@@ -31,7 +75,12 @@ const Sidebar = () => {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 p-3">
-        <NavLink to="/dashboard" end className={navClass}>
+        <NavLink
+          to="/dashboard"
+          end
+          className={navClass}
+          onClick={() => onClose?.()}
+        >
           <span
             className="grid h-8 w-8 place-items-center rounded-lg bg-[#0054A6]/25 text-[#7dd3fc]"
             aria-hidden
@@ -54,7 +103,11 @@ const Sidebar = () => {
           Dashboard
         </NavLink>
 
-        <NavLink to="/admin-programs" className={navClass}>
+        <NavLink
+          to="/admin-programs"
+          className={navClass}
+          onClick={() => onClose?.()}
+        >
           <span
             className="grid h-8 w-8 place-items-center rounded-lg bg-[#0054A6]/25 text-[#7dd3fc]"
             aria-hidden
@@ -77,7 +130,11 @@ const Sidebar = () => {
           Programs
         </NavLink>
 
-        <NavLink to="/admin-post" className={navClass}>
+        <NavLink
+          to="/admin-post"
+          className={navClass}
+          onClick={() => onClose?.()}
+        >
           <span
             className="grid h-8 w-8 place-items-center rounded-lg bg-[#0054A6]/25 text-[#7dd3fc]"
             aria-hidden
@@ -105,6 +162,7 @@ const Sidebar = () => {
         <NavLink
           to="/"
           className="mb-3 block rounded-xl px-4 py-2.5 text-center text-sm text-white/55 transition hover:bg-white/5 hover:text-white/90"
+          onClick={() => onClose?.()}
         >
           ← Public site
         </NavLink>
@@ -131,7 +189,8 @@ const Sidebar = () => {
           Log out
         </button>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 };
 

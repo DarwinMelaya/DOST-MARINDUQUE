@@ -110,7 +110,7 @@ const AdminPost = () => {
         <button
           type="button"
           onClick={openCreate}
-          className="shrink-0 rounded-xl bg-gradient-to-r from-[#0054A6] to-[#0B3B76] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0054A6]/25 transition hover:brightness-110"
+          className="w-full shrink-0 rounded-xl bg-gradient-to-r from-[#0054A6] to-[#0B3B76] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0054A6]/25 transition hover:brightness-110 sm:w-auto"
         >
           Add highlight
         </button>
@@ -186,7 +186,7 @@ const AdminPost = () => {
       </div>
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-auto bg-black/70 p-4 backdrop-blur-sm sm:items-center">
           <PostModal
             onClose={closeModal}
             onSaved={handleSaved}
