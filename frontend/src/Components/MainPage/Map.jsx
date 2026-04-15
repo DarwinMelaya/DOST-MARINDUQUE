@@ -24,6 +24,12 @@ import {
   fixLeafletDefaultIcons,
 } from "../Map/programMarkers";
 
+const PSTO_OFFICE_SITE = {
+  id: "psto-marinduque-office",
+  name: "PSTO-Marinduque Office",
+  coordinates: [13.440439852331924, 121.82847833221463],
+};
+
 const Map = () => {
   const geo = useGeolocation();
   const userLocation =
@@ -129,19 +135,72 @@ const Map = () => {
             subdomains="abcd"
           />
 
-          <Circle
-            center={center}
-            radius={12000}
-            pathOptions={{
-              color: "#22D3EE",
-              weight: 2,
-              opacity: 0.9,
-              fillColor: "#0054A6",
-              fillOpacity: 0.18,
-            }}
-          />
-
           <MapUserLocation position={userLocation} bounds={bounds} />
+
+          <Marker
+            position={PSTO_OFFICE_SITE.coordinates}
+            icon={createProgramDivIcon({
+              label: "PSTO",
+              color: "#F59E0B",
+            })}
+          >
+            <Tooltip direction="top" offset={[0, -6]} opacity={1}>
+              <span style={{ fontWeight: 800 }}>PSTO</span>{" "}
+              <span style={{ opacity: 0.85 }}>• {PSTO_OFFICE_SITE.name}</span>
+            </Tooltip>
+            <Popup>
+              <div style={{ minWidth: 220, color: "#0f172a" }}>
+                <div style={{ fontWeight: 800 }}>{PSTO_OFFICE_SITE.name}</div>
+                <div style={{ marginTop: 6, opacity: 0.9, fontSize: 13 }}>
+                  Location:{" "}
+                  <b>
+                    {PSTO_OFFICE_SITE.coordinates[0].toFixed(6)},{" "}
+                    {PSTO_OFFICE_SITE.coordinates[1].toFixed(6)}
+                  </b>
+                </div>
+                <a
+                  href={getGoogleMapsDirectionsUrl(
+                    {
+                      lat: PSTO_OFFICE_SITE.coordinates[0],
+                      lng: PSTO_OFFICE_SITE.coordinates[1],
+                    },
+                    userLocation
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-block",
+                    marginTop: 12,
+                    padding: "9px 14px",
+                    borderRadius: 8,
+                    background: "#0054A6",
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    textDecoration: "none",
+                    textAlign: "center",
+                    width: "100%",
+                    boxSizing: "border-box",
+                  }}
+                >
+                  Go
+                </a>
+                <p
+                  style={{
+                    marginTop: 8,
+                    fontSize: 11,
+                    lineHeight: 1.35,
+                    opacity: 0.72,
+                    color: "#334155",
+                  }}
+                >
+                  {userLocation
+                    ? "Google Maps: from your current location to this office."
+                    : "Google Maps opens to this office. Allow location on this page to route from where you are."}
+                </p>
+              </div>
+            </Popup>
+          </Marker>
 
           {programSites.map((site) => {
             const style = PROGRAM_STYLES[site.program] ?? PROGRAM_STYLES.SSCP;
