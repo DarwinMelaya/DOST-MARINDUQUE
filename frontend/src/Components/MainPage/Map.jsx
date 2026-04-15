@@ -10,7 +10,7 @@ import {
 import L from "leaflet";
 
 import { fetchProjects } from "../../api/projectsApi";
-import { useGeolocation } from "../../hooks/useGeolocation";
+import { useGeolocation } from "../../Hooks/useGeolocation";
 import { getGoogleMapsDirectionsUrl } from "../../utils/googleMaps";
 import {
   PROGRAM_ORDER,

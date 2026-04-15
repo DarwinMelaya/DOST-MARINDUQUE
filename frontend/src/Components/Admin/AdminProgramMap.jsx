@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { useGeolocation } from "../../hooks/useGeolocation";
+import { useGeolocation } from "../../Hooks/useGeolocation";
 import {
   Circle,
   MapContainer,
