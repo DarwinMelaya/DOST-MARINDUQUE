@@ -9,8 +9,9 @@ const SOCIALS = [
     id: "facebook",
     name: "Facebook",
     handle: "@pstc.marinduque",
-    description: "Official DOST Marinduque (PSTC) page — programs, advisories, and community updates.",
-    href: "https://www.facebook.com/pstc.marinduque",
+    description:
+      "Official DOST Marinduque (PSTC) page — programs, advisories, and community updates.",
+    href: "https://www.facebook.com/psto.marinduque",
     Icon: FacebookIcon,
     accent: "from-[#1877F2]/25 to-white/[0.03]",
     ring: "hover:border-[#1877F2]/45",
@@ -47,8 +48,9 @@ const ContactUs = () => {
             </span>
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/65">
-            Reach the Provincial Science and Technology Center (PSTC) for inquiries, coordination, and
-            STI services. Follow our official social page for the latest news and announcements.
+            Reach the Provincial Science and Technology Center (PSTC) for
+            inquiries, coordination, and STI services. Follow our official
+            social page for the latest news and announcements.
           </p>
         </div>
 
@@ -66,7 +68,9 @@ const ContactUs = () => {
             </address>
             <dl className="mt-5 space-y-3 text-sm">
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-white/45">Phone</dt>
+                <dt className="text-xs font-medium uppercase tracking-wide text-white/45">
+                  Phone
+                </dt>
                 <dd className="mt-1">
                   <a
                     href={CONTACT.phoneHref}
@@ -77,7 +81,9 @@ const ContactUs = () => {
                 </dd>
               </div>
               <div>
-                <dt className="text-xs font-medium uppercase tracking-wide text-white/45">Email</dt>
+                <dt className="text-xs font-medium uppercase tracking-wide text-white/45">
+                  Email
+                </dt>
                 <dd className="mt-1">
                   <a
                     href={CONTACT.emailHref}
@@ -95,35 +101,53 @@ const ContactUs = () => {
               Social media
             </h3>
             <ul className="mt-4 flex flex-col gap-4">
-              {SOCIALS.map(({ id, name, handle, description, href, Icon, accent, ring }) => (
-                <li key={id}>
-                  <a
-                    href={href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`group flex gap-4 rounded-2xl border border-white/10 bg-gradient-to-br ${accent} p-4 transition ${ring} hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-[#FDB913]/50 focus:ring-offset-2 focus:ring-offset-black sm:p-5`}
-                  >
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white shadow-inner ring-1 ring-white/10 transition group-hover:bg-white/15">
-                      <Icon className="h-6 w-6" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                        <span className="text-sm font-semibold text-white">{name}</span>
-                        <span className="text-xs font-medium text-white/50">{handle}</span>
+              {SOCIALS.map(
+                ({
+                  id,
+                  name,
+                  handle,
+                  description,
+                  href,
+                  Icon,
+                  accent,
+                  ring,
+                }) => (
+                  <li key={id}>
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`group flex gap-4 rounded-2xl border border-white/10 bg-gradient-to-br ${accent} p-4 transition ${ring} hover:bg-white/[0.06] focus:outline-none focus:ring-2 focus:ring-[#FDB913]/50 focus:ring-offset-2 focus:ring-offset-black sm:p-5`}
+                    >
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white shadow-inner ring-1 ring-white/10 transition group-hover:bg-white/15">
+                        <Icon className="h-6 w-6" />
                       </span>
-                      <span className="mt-1 block text-pretty text-sm leading-relaxed text-white/70">
-                        {description}
-                      </span>
-                      <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-cyan-200/90 transition group-hover:text-cyan-100">
-                        Visit page
-                        <span aria-hidden="true" className="translate-x-0 transition group-hover:translate-x-0.5">
-                          →
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                          <span className="text-sm font-semibold text-white">
+                            {name}
+                          </span>
+                          <span className="text-xs font-medium text-white/50">
+                            {handle}
+                          </span>
+                        </span>
+                        <span className="mt-1 block text-pretty text-sm leading-relaxed text-white/70">
+                          {description}
+                        </span>
+                        <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-cyan-200/90 transition group-hover:text-cyan-100">
+                          Visit page
+                          <span
+                            aria-hidden="true"
+                            className="translate-x-0 transition group-hover:translate-x-0.5"
+                          >
+                            →
+                          </span>
                         </span>
                       </span>
-                    </span>
-                  </a>
-                </li>
-              ))}
+                    </a>
+                  </li>
+                ),
+              )}
             </ul>
           </div>
         </div>
