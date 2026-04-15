@@ -41,6 +41,42 @@ function parseAllowedOrigins(v) {
 
 const allowedOrigins = parseAllowedOrigins(CLIENT_ORIGIN);
 
+function isOriginAllowed(origin, allowed) {
+  if (!origin) return true;
+  if (!Array.isArray(allowed) || allowed.length === 0) return false;
+  if (allowed.includes("*")) return true;
+
+  // Exact match (most secure / recommended)
+  if (allowed.includes(origin)) return true;
+
+  // Wildcards / suffix allow:
+  // - "*.vercel.app" allows any subdomain of vercel.app
+  // - ".vercel.app" same as above
+  // - "vercel.app" allows that domain + subdomains
+  let hostname;
+  try {
+    hostname = new URL(origin).hostname;
+  } catch {
+    return false;
+  }
+  const host = hostname.toLowerCase();
+
+  return allowed.some((rule) => {
+    const r = String(rule || "").trim().toLowerCase();
+    if (!r || r === origin.toLowerCase()) return false;
+
+    // If rule includes protocol, treat as exact origin only.
+    if (r.includes("://")) return false;
+
+    const suffix = r.startsWith("*.") ? r.slice(1) : r; // "*.x.com" -> ".x.com"
+    if (suffix.startsWith(".")) {
+      return host.endsWith(suffix);
+    }
+    // "vercel.app" should match "vercel.app" and "*.vercel.app"
+    return host === suffix || host.endsWith(`.${suffix}`);
+  });
+}
+
 if (!JWT_SECRET) {
   console.error("Missing JWT_SECRET in environment.");
   process.exit(1);
@@ -51,9 +87,7 @@ app.use(
     origin(origin, cb) {
       // Non-browser requests (curl, server-to-server) have no origin.
       if (!origin) return cb(null, true);
-      if (allowedOrigins.includes("*")) return cb(null, true);
-      if (allowedOrigins.length === 0) return cb(null, false);
-      if (allowedOrigins.includes(origin)) return cb(null, true);
+      if (isOriginAllowed(origin, allowedOrigins)) return cb(null, true);
       const err = new Error("Not allowed by CORS");
       err.code = "CORS_NOT_ALLOWED";
       return cb(err);
