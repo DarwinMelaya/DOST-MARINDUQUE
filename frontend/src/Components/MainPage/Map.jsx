@@ -15,6 +15,7 @@ import { getGoogleMapsDirectionsUrl } from "../../utils/googleMaps";
 import {
   PROGRAM_ORDER,
   countMapSitesByProgramType,
+  projectHasMapCoordinates,
   projectsToMapSites,
 } from "../../utils/projectSites";
 import MapUserLocation from "../Map/MapUserLocation";
@@ -45,13 +46,89 @@ const Map = () => {
       : null;
 
   const [projects, setProjects] = useState([]);
+  const [filters, setFilters] = useState({
+    q: "",
+    program: "ALL",
+    municipality: "ALL",
+    status: "ALL",
+    pinnedOnly: true,
+  });
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (String(filters.q || "").trim()) n += 1;
+    if (filters.program !== "ALL") n += 1;
+    if (filters.municipality !== "ALL") n += 1;
+    if (filters.status !== "ALL") n += 1;
+    if (!filters.pinnedOnly) n += 1; // toggled away from default
+    return n;
+  }, [filters]);
+
+  const programOptions = useMemo(() => {
+    const set = new Set();
+    for (const p of projects) {
+      if (p?.programType) set.add(p.programType);
+    }
+    return Array.from(set).sort((a, b) => String(a).localeCompare(String(b)));
+  }, [projects]);
+
+  const municipalityOptions = useMemo(() => {
+    const set = new Set();
+    for (const p of projects) {
+      const v = p?.beneficiary;
+      if (v && String(v).trim()) set.add(String(v).trim());
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [projects]);
+
+  const statusOptions = useMemo(() => {
+    const set = new Set();
+    for (const p of projects) {
+      const v = p?.projectStatus;
+      if (v && String(v).trim()) set.add(String(v).trim());
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [projects]);
+
+  const filteredProjects = useMemo(() => {
+    const q = String(filters.q || "").trim().toLowerCase();
+    return projects.filter((p) => {
+      if (filters.pinnedOnly && !projectHasMapCoordinates(p)) return false;
+      if (filters.program !== "ALL" && p?.programType !== filters.program)
+        return false;
+      if (
+        filters.municipality !== "ALL" &&
+        String(p?.beneficiary ?? "").trim() !== filters.municipality
+      )
+        return false;
+      if (
+        filters.status !== "ALL" &&
+        String(p?.projectStatus ?? "").trim() !== filters.status
+      )
+        return false;
+      if (!q) return true;
+      const hay = [
+        p?.title,
+        p?.beneficiary,
+        p?.projectStatus,
+        p?.briefDescription,
+        p?.programType,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [projects, filters]);
+
   const programSites = useMemo(
-    () => projectsToMapSites(projects),
-    [projects]
+    () => projectsToMapSites(filteredProjects),
+    [filteredProjects]
   );
   const mapCountsByProgram = useMemo(
-    () => countMapSitesByProgramType(projects),
-    [projects]
+    () => countMapSitesByProgramType(filteredProjects),
+    [filteredProjects]
   );
   // Marinduque (approximate) focus area
   const bounds = useMemo(
@@ -99,22 +176,156 @@ const Map = () => {
             Marinduque, Philippines
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 sm:inline-flex">
-            <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,.65)]" />
-            {programSites.length} site{programSites.length === 1 ? "" : "s"}
-          </div>
-          <div className="max-w-[min(100vw-2rem,240px)] text-right text-[10px] leading-tight text-white/50">
-            {geo.loading ? (
-              <span className="text-sky-300/90">Finding your location…</span>
-            ) : geo.error ? (
-              <span title={geo.error}>Location: {geo.error}</span>
-            ) : userLocation ? (
-              <span className="text-emerald-300/90">Your location is on the map</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((v) => !v)}
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 sm:h-11 sm:px-4 sm:text-sm"
+            aria-expanded={filtersOpen}
+            aria-controls="map-filters-panel"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="h-4 w-4"
+              aria-hidden
+            >
+              <path
+                fillRule="evenodd"
+                d="M3 5.25A.75.75 0 0 1 3.75 4.5h16.5a.75.75 0 0 1 .53 1.28l-6.28 6.28v6.19a.75.75 0 0 1-1.06.67l-3-1.5a.75.75 0 0 1-.41-.67v-4.69L3.22 5.78A.75.75 0 0 1 3 5.25Z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Filters
+            {activeFilterCount > 0 ? (
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-cyan-400/15 px-1.5 text-[11px] font-bold text-cyan-100 ring-1 ring-cyan-400/25">
+                {activeFilterCount}
+              </span>
             ) : null}
+          </button>
+
+          <div className="flex flex-col items-end gap-1">
+            <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 sm:inline-flex">
+              <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,.65)]" />
+              {programSites.length} site{programSites.length === 1 ? "" : "s"}
+            </div>
+            <div className="max-w-[min(100vw-2rem,240px)] text-right text-[10px] leading-tight text-white/50">
+              {geo.loading ? (
+                <span className="text-sky-300/90">Finding your location…</span>
+              ) : geo.error ? (
+                <span title={geo.error}>Location: {geo.error}</span>
+              ) : userLocation ? (
+                <span className="text-emerald-300/90">
+                  Your location is on the map
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
+
+      {filtersOpen ? (
+        <div className="relative px-4 pb-3 sm:px-6">
+          <div
+            id="map-filters-panel"
+            className="grid gap-2 rounded-2xl border border-white/10 bg-black/35 p-3 backdrop-blur sm:grid-cols-[1.2fr_.7fr_.7fr_.7fr_auto_auto] sm:items-center sm:gap-3 sm:px-4 sm:py-3"
+          >
+          <label className="sr-only" htmlFor="map-filter-q">
+            Search projects
+          </label>
+          <input
+            id="map-filter-q"
+            value={filters.q}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, q: e.target.value }))
+            }
+            placeholder="Search title, beneficiary, status…"
+            className="h-11 w-full rounded-xl border border-white/15 bg-black/30 px-3 text-sm text-white placeholder:text-white/35 focus:border-cyan-400/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/30"
+          />
+
+          <select
+            value={filters.program}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, program: e.target.value }))
+            }
+            className="h-11 w-full rounded-xl border border-white/15 bg-black/30 px-3 text-sm text-white focus:border-cyan-400/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/30"
+            aria-label="Filter by program"
+          >
+            <option value="ALL">All programs</option>
+            {programOptions.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.municipality}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, municipality: e.target.value }))
+            }
+            className="h-11 w-full rounded-xl border border-white/15 bg-black/30 px-3 text-sm text-white focus:border-cyan-400/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/30"
+            aria-label="Filter by beneficiary"
+          >
+            <option value="ALL">All beneficiaries</option>
+            {municipalityOptions.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filters.status}
+            onChange={(e) =>
+              setFilters((prev) => ({ ...prev, status: e.target.value }))
+            }
+            className="h-11 w-full rounded-xl border border-white/15 bg-black/30 px-3 text-sm text-white focus:border-cyan-400/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/30"
+            aria-label="Filter by status"
+          >
+            <option value="ALL">All status</option>
+            {statusOptions.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={() =>
+              setFilters((prev) => ({ ...prev, pinnedOnly: !prev.pinnedOnly }))
+            }
+            className={`h-11 w-full rounded-xl border px-3 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 sm:w-auto ${
+              filters.pinnedOnly
+                ? "border-cyan-400/35 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/15"
+                : "border-white/15 bg-white/5 text-white/85 hover:bg-white/10"
+            }`}
+            aria-pressed={filters.pinnedOnly}
+            title="Show only projects with valid map coordinates"
+          >
+            Pins only
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              setFilters({
+                q: "",
+                program: "ALL",
+                municipality: "ALL",
+                status: "ALL",
+                pinnedOnly: true,
+              })
+            }
+            className="h-11 w-full rounded-xl border border-white/15 bg-transparent px-3 text-sm font-semibold text-white/80 transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 sm:w-auto"
+          >
+            Reset
+          </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="relative h-[calc(100vh-56px)] min-h-[520px] w-full">
         <MapContainer
