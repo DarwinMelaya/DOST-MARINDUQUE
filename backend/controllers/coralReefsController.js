@@ -25,6 +25,16 @@ function serialize(doc) {
           ? Number(o.location.longitude)
           : null,
     },
+    areaCoordinates: Array.isArray(o.areaCoordinates)
+      ? o.areaCoordinates
+          .map((point) => {
+            const latitude = Number(point?.latitude);
+            const longitude = Number(point?.longitude);
+            if (Number.isNaN(latitude) || Number.isNaN(longitude)) return null;
+            return { latitude, longitude };
+          })
+          .filter(Boolean)
+      : [],
     photo: o.photo ?? "",
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,
@@ -37,6 +47,7 @@ function normalizeBody(req) {
     return req.body;
   }
   let location = null;
+  let areaCoordinates = [];
   if (typeof req.body.location === "string" && req.body.location.trim()) {
     try {
       location = JSON.parse(req.body.location);
@@ -46,12 +57,25 @@ function normalizeBody(req) {
   } else if (req.body.location && typeof req.body.location === "object") {
     location = req.body.location;
   }
+  if (
+    typeof req.body.areaCoordinates === "string" &&
+    req.body.areaCoordinates.trim()
+  ) {
+    try {
+      areaCoordinates = JSON.parse(req.body.areaCoordinates);
+    } catch {
+      areaCoordinates = [];
+    }
+  } else if (Array.isArray(req.body.areaCoordinates)) {
+    areaCoordinates = req.body.areaCoordinates;
+  }
   return {
     coralName: req.body.coralName,
     coralType: req.body.coralType,
     description: req.body.description,
     coralStatus: req.body.coralStatus,
     location,
+    areaCoordinates,
   };
 }
 
@@ -94,6 +118,8 @@ function validateBody(body) {
 
   const loc = parseLocation(body.location);
   if (loc.error) return { error: loc.error };
+  const area = parseAreaCoordinates(body.areaCoordinates);
+  if (area.error) return { error: area.error };
 
   return {
     values: {
@@ -102,8 +128,31 @@ function validateBody(body) {
       description,
       coralStatus,
       location: { latitude: loc.latitude, longitude: loc.longitude },
+      areaCoordinates: area.coordinates,
     },
   };
+}
+
+function parseAreaCoordinates(areaCoordinates) {
+  if (areaCoordinates == null || areaCoordinates === "") {
+    return { coordinates: [] };
+  }
+  if (!Array.isArray(areaCoordinates)) {
+    return { error: "Area coordinates must be an array of latitude/longitude points." };
+  }
+  const coordinates = [];
+  for (const point of areaCoordinates) {
+    const latitude = Number(point?.latitude);
+    const longitude = Number(point?.longitude);
+    if (Number.isNaN(latitude) || Number.isNaN(longitude)) {
+      return { error: "Each area point must have valid latitude and longitude." };
+    }
+    coordinates.push({ latitude, longitude });
+  }
+  if (coordinates.length > 0 && coordinates.length < 3) {
+    return { error: "Drawn area must have at least 3 points." };
+  }
+  return { coordinates };
 }
 
 async function listCoralReefs(_req, res) {

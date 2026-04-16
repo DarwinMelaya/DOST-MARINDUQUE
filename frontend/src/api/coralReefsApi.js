@@ -29,6 +29,7 @@ export async function createCoralReef(payload) {
   fd.append("description", rest.description ?? "");
   fd.append("coralStatus", rest.coralStatus ?? "");
   fd.append("location", JSON.stringify(rest.location ?? {}));
+  fd.append("areaCoordinates", JSON.stringify(rest.areaCoordinates ?? []));
   fd.append("photo", photoFile);
 
   const { data } = await api.post("/coral-reefs", fd, multipartConfig());

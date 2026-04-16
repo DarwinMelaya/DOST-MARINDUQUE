@@ -14,6 +14,15 @@ const coralReefSchema = new mongoose.Schema(
       latitude: { type: Number, default: null },
       longitude: { type: Number, default: null },
     },
+    areaCoordinates: {
+      type: [
+        {
+          latitude: { type: Number, required: true },
+          longitude: { type: Number, required: true },
+        },
+      ],
+      default: [],
+    },
     photo: { type: String, default: "" },
   },
   { timestamps: true }

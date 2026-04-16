@@ -16,6 +16,9 @@ const AddCoralReefModal = ({
   longitude,
   onLatitudeChange,
   onLongitudeChange,
+  areaCoordinates = [],
+  areaPointCount = 0,
+  onClearArea,
 }) => {
   const [coralName, setCoralName] = useState("");
   const [coralType, setCoralType] = useState("");
@@ -72,6 +75,10 @@ const AddCoralReefModal = ({
         toast.error("Provide both latitude and longitude, or leave both empty.");
         return;
       }
+      if (areaCoordinates.length > 0 && areaCoordinates.length < 3) {
+        toast.error("Drawn area must have at least 3 points.");
+        return;
+      }
 
       await onSave({
         coralName,
@@ -82,6 +89,7 @@ const AddCoralReefModal = ({
           latitude: lat,
           longitude: lng,
         },
+        areaCoordinates,
         photoFile,
       });
 
@@ -244,6 +252,19 @@ const AddCoralReefModal = ({
                   placeholder="e.g. 122.0837"
                 />
               </div>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-black/25 px-3 py-2 text-xs text-white/70">
+              <span>
+                Drawn area points: <span className="font-semibold text-white/90">{areaPointCount}</span>
+              </span>
+              <button
+                type="button"
+                onClick={onClearArea}
+                disabled={submitting || areaPointCount === 0}
+                className="rounded-md border border-white/15 px-2.5 py-1 text-[11px] font-medium text-white/80 transition hover:bg-white/5 disabled:opacity-50"
+              >
+                Clear drawn area
+              </button>
             </div>
           </div>
         </div>

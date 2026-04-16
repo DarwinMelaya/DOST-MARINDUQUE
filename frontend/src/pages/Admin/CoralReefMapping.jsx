@@ -16,6 +16,8 @@ const CoralReefMapping = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [pickLat, setPickLat] = useState("");
   const [pickLng, setPickLng] = useState("");
+  const [pickAreaCoordinates, setPickAreaCoordinates] = useState([]);
+  const [drawMode, setDrawMode] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
@@ -58,6 +60,8 @@ const CoralReefMapping = () => {
   const openModal = () => {
     setPickLat("");
     setPickLng("");
+    setPickAreaCoordinates([]);
+    setDrawMode(false);
     setModalOpen(true);
   };
 
@@ -65,12 +69,30 @@ const CoralReefMapping = () => {
     setModalOpen(false);
     setPickLat("");
     setPickLng("");
+    setPickAreaCoordinates([]);
+    setDrawMode(false);
   };
 
   const handlePickOnMap = (lat, lng) => {
+    if (drawMode) {
+      setPickAreaCoordinates((prev) => [...prev, { latitude: lat, longitude: lng }]);
+      return;
+    }
     setPickLat(lat.toFixed(6));
     setPickLng(lng.toFixed(6));
     toast.success("Location set from map.");
+  };
+
+  const toggleDrawMode = () => {
+    setDrawMode((prev) => !prev);
+  };
+
+  const handleUndoLastPoint = () => {
+    setPickAreaCoordinates((prev) => prev.slice(0, -1));
+  };
+
+  const handleClearArea = () => {
+    setPickAreaCoordinates([]);
   };
 
   const handleDelete = async (record) => {
@@ -126,6 +148,10 @@ const CoralReefMapping = () => {
               pickMode
               onPickLocation={handlePickOnMap}
               pickerPosition={pickerPosition}
+              drawMode={drawMode}
+              onToggleDrawMode={toggleDrawMode}
+              draftAreaCoordinates={pickAreaCoordinates}
+              onUndoLastPoint={handleUndoLastPoint}
             />
           </div>
           <div className="flex min-h-0 w-full min-w-0 flex-[0.95] flex-col border-t border-white/10 md:max-w-xl md:border-l md:border-t-0 lg:max-w-lg">
@@ -136,6 +162,9 @@ const CoralReefMapping = () => {
               longitude={pickLng}
               onLatitudeChange={setPickLat}
               onLongitudeChange={setPickLng}
+              areaCoordinates={pickAreaCoordinates}
+              areaPointCount={pickAreaCoordinates.length}
+              onClearArea={handleClearArea}
             />
           </div>
         </div>
@@ -156,6 +185,7 @@ const CoralReefMapping = () => {
                     <th className="px-3 py-3 sm:px-4">Description</th>
                     <th className="px-3 py-3 sm:px-4">Status</th>
                     <th className="px-3 py-3 sm:px-4">Location</th>
+                    <th className="px-3 py-3 sm:px-4">Area</th>
                     <th className="px-3 py-3 text-right sm:px-4">Actions</th>
                   </tr>
                 </thead>
@@ -201,6 +231,12 @@ const CoralReefMapping = () => {
                                 record.location.longitude
                               ).toFixed(6)}`
                             : "No coordinates"}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2.5 align-middle text-xs text-white/75 sm:px-4">
+                          {Array.isArray(record.areaCoordinates) &&
+                          record.areaCoordinates.length >= 3
+                            ? `${record.areaCoordinates.length} points`
+                            : "No drawn area"}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2.5 text-right align-middle sm:px-4">
                           <button
