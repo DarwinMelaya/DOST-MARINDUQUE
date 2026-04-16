@@ -1,5 +1,234 @@
+import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
+
+import {
+  createCoralReef,
+  deleteCoralReef,
+  fetchCoralReefs,
+} from "../../api/coralReefsApi";
+import { getApiErrorMessage } from "../../api/client";
+import CoralReefMap from "../../Components/Admin/CoralReefMap";
+import AddCoralReefModal from "../../Components/Modals/AdminModals/AddCoralReefModal";
+
 const CoralReefMapping = () => {
-  return <div>CoralReefMapping</div>;
+  const [records, setRecords] = useState([]);
+  const [loadError, setLoadError] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [pickLat, setPickLat] = useState("");
+  const [pickLng, setPickLng] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await fetchCoralReefs();
+        if (!cancelled) {
+          setRecords(list);
+          setLoadError("");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          const msg = getApiErrorMessage(
+            err,
+            "Could not load coral reef records from the server."
+          );
+          setLoadError(msg);
+          toast.error(msg);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleSave = async (payload) => {
+    const created = await createCoralReef(payload);
+    setRecords((prev) => [created, ...prev]);
+  };
+
+  const pickerPosition = useMemo(() => {
+    const lat = Number.parseFloat(String(pickLat).replace(",", "."));
+    const lng = Number.parseFloat(String(pickLng).replace(",", "."));
+    if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
+    return { lat, lng };
+  }, [pickLat, pickLng]);
+
+  const openModal = () => {
+    setPickLat("");
+    setPickLng("");
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setPickLat("");
+    setPickLng("");
+  };
+
+  const handlePickOnMap = (lat, lng) => {
+    setPickLat(lat.toFixed(6));
+    setPickLng(lng.toFixed(6));
+    toast.success("Location set from map.");
+  };
+
+  const handleDelete = async (record) => {
+    if (!window.confirm(`Delete "${record.coralName}"? This cannot be undone.`)) {
+      return;
+    }
+    setDeletingId(record.id);
+    try {
+      await deleteCoralReef(record.id);
+      setRecords((prev) => prev.filter((item) => item.id !== record.id));
+      toast.success("Coral reef record deleted.");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Could not delete coral reef record."));
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  return (
+    <div className="w-full max-w-none">
+      {loadError ? (
+        <p className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100/95">
+          {loadError}
+        </p>
+      ) : null}
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            Coral Reef Mapping
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-white/55">
+            Add and monitor coral reef entries with type, health status, photo,
+            and location coordinates.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={openModal}
+          className="w-full shrink-0 rounded-xl bg-gradient-to-r from-[#0054A6] to-[#0B3B76] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0054A6]/25 transition hover:brightness-110 sm:w-auto"
+        >
+          Add coral reef
+        </button>
+      </div>
+
+      {modalOpen ? (
+        <div className="fixed inset-0 z-[100] flex h-full min-h-0 flex-col bg-slate-950 md:flex-row">
+          <div className="relative flex min-h-[36vh] w-full flex-[1.2] flex-col md:min-h-0 md:overflow-hidden">
+            <CoralReefMap
+              className="h-full min-h-[36vh] rounded-none border-x-0 border-t-0 md:min-h-0"
+              splitLayout
+              records={records}
+              pickMode
+              onPickLocation={handlePickOnMap}
+              pickerPosition={pickerPosition}
+            />
+          </div>
+          <div className="flex min-h-0 w-full min-w-0 flex-[0.95] flex-col border-t border-white/10 md:max-w-xl md:border-l md:border-t-0 lg:max-w-lg">
+            <AddCoralReefModal
+              onClose={closeModal}
+              onSave={handleSave}
+              latitude={pickLat}
+              longitude={pickLng}
+              onLatitudeChange={setPickLat}
+              onLongitudeChange={setPickLng}
+            />
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="mt-8">
+            <CoralReefMap records={records} />
+          </div>
+
+          {records.length > 0 ? (
+            <div className="mt-8 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
+              <table className="w-full min-w-[860px] border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-white/10 bg-black/30 text-xs font-semibold uppercase tracking-wide text-white/55">
+                    <th className="px-3 py-3 sm:px-4">Photo</th>
+                    <th className="px-3 py-3 sm:px-4">Coral name</th>
+                    <th className="px-3 py-3 sm:px-4">Coral type</th>
+                    <th className="px-3 py-3 sm:px-4">Description</th>
+                    <th className="px-3 py-3 sm:px-4">Status</th>
+                    <th className="px-3 py-3 sm:px-4">Location</th>
+                    <th className="px-3 py-3 text-right sm:px-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {records.map((record) => {
+                    const hasCoordinates =
+                      record.location?.latitude != null &&
+                      record.location?.longitude != null;
+                    return (
+                      <tr
+                        key={record.id}
+                        className="border-b border-white/[0.06] transition hover:bg-white/[0.04]"
+                      >
+                        <td className="px-3 py-2.5 align-middle sm:px-4">
+                          {record.photo ? (
+                            <img
+                              src={record.photo}
+                              alt=""
+                              className="h-11 w-14 rounded-lg object-cover ring-1 ring-white/10"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex h-11 w-14 items-center justify-center rounded-lg bg-white/5 text-[10px] text-white/35">
+                              -
+                            </div>
+                          )}
+                        </td>
+                        <td className="max-w-[180px] px-3 py-2.5 align-middle font-medium text-white sm:px-4">
+                          <span className="line-clamp-2">{record.coralName}</span>
+                        </td>
+                        <td className="max-w-[150px] px-3 py-2.5 align-middle text-white/80 sm:px-4">
+                          <span className="line-clamp-2">{record.coralType}</span>
+                        </td>
+                        <td className="max-w-[220px] px-3 py-2.5 align-middle text-white/65 sm:px-4">
+                          <span className="line-clamp-2">{record.description || "-"}</span>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2.5 align-middle text-white/90 sm:px-4">
+                          {record.coralStatus}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2.5 align-middle text-xs text-white/75 sm:px-4">
+                          {hasCoordinates
+                            ? `${Number(record.location.latitude).toFixed(6)}, ${Number(
+                                record.location.longitude
+                              ).toFixed(6)}`
+                            : "No coordinates"}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2.5 text-right align-middle sm:px-4">
+                          <button
+                            type="button"
+                            disabled={deletingId === record.id}
+                            onClick={() => handleDelete(record)}
+                            className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-100/95 transition hover:bg-rose-500/20 disabled:opacity-50"
+                          >
+                            {deletingId === record.id ? "..." : "Delete"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-8 text-sm text-white/60">
+              No coral reef records yet. Click{" "}
+              <span className="text-white/80">Add coral reef</span> to create your first
+              entry.
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 };
 
 export default CoralReefMapping;

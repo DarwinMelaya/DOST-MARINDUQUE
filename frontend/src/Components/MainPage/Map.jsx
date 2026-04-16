@@ -433,10 +433,8 @@ const Map = () => {
         <MapContainer
           center={center}
           zoom={11}
-          minZoom={10}
-          maxZoom={15}
-          maxBounds={bounds}
-          maxBoundsViscosity={1.0}
+          minZoom={2}
+          maxZoom={18}
           scrollWheelZoom={false}
           attributionControl={false}
           className="h-full w-full"
@@ -632,7 +630,7 @@ const Map = () => {
           <div className="truncate">
             Tiles © OpenStreetMap contributors • © CARTO
           </div>
-          <div className="hidden sm:block">Zoom: 10–15</div>
+          <div className="hidden sm:block">Zoom: 2-18</div>
         </div>
       </div>
     </div>
