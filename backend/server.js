@@ -8,6 +8,8 @@ const requireAdmin = require("./middleware/requireAdmin");
 const {
   listProjects,
   createProject,
+  updateProject,
+  deleteProject,
 } = require("./controllers/projectsController");
 const {
   getFeaturedAnnouncement,
@@ -25,6 +27,23 @@ const announcementImages = multer({
     cb(null, ok);
   },
 }).fields([{ name: "images", maxCount: 12 }]);
+
+const projectImages = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 6 * 1024 * 1024, files: 15 },
+  fileFilter: (_req, file, cb) => {
+    const ok = /^image\/(jpeg|jpg|png|webp|gif)$/i.test(file.mimetype);
+    cb(null, ok);
+  },
+}).fields([{ name: "images", maxCount: 12 }]);
+
+function projectMultipart(req, res, next) {
+  const ct = req.get("content-type") || "";
+  if (ct.includes("multipart/form-data")) {
+    return projectImages(req, res, next);
+  }
+  next();
+}
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -117,7 +136,9 @@ app.use("/api/auth/admin", adminAuthRoutes);
 // Register on `app` directly so POST /api/projects is always found (nested
 // Router + Express 5 can miss POST on some setups).
 app.get("/api/projects", listProjects);
-app.post("/api/projects", requireAdmin, createProject);
+app.post("/api/projects", requireAdmin, projectMultipart, createProject);
+app.patch("/api/projects/:id", requireAdmin, projectMultipart, updateProject);
+app.delete("/api/projects/:id", requireAdmin, deleteProject);
 
 app.get("/api/announcements/featured", getFeaturedAnnouncement);
 app.get("/api/announcements", requireAdmin, listAnnouncements);
@@ -149,7 +170,13 @@ app.use((err, _req, res, next) => {
   app.listen(PORT, () => {
     console.log(`API listening on http://localhost:${PORT}`);
     console.log("  GET  /api/projects  (public)");
-    console.log("  POST /api/projects  (Authorization: Bearer <admin JWT>)");
+    console.log(
+      "  POST /api/projects  (JSON or multipart + images, Authorization: Bearer <admin JWT>)"
+    );
+    console.log(
+      "  PATCH /api/projects/:id  (JSON or multipart + keptImagesJson, Authorization: Bearer <admin JWT>)"
+    );
+    console.log("  DELETE /api/projects/:id  (admin JWT)");
     console.log("  GET  /api/announcements/featured  (public)");
     console.log("  GET  /api/announcements  (admin JWT)");
     console.log(

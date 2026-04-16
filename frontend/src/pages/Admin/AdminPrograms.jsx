@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 import { getApiErrorMessage } from "../../api/client";
-import { createProject, fetchProjects } from "../../api/projectsApi";
+import {
+  createProject,
+  deleteProject,
+  fetchProjects,
+  updateProject,
+} from "../../api/projectsApi";
 import AdminProgramMap from "../../Components/Admin/AdminProgramMap";
 import ProgramsModals from "../../Components/Modals/AdminModals/ProgramsModals";
 import { PROGRAM_STYLES } from "../../Components/Map/programMarkers";
@@ -16,8 +21,10 @@ const AdminPrograms = () => {
   const [projects, setProjects] = useState([]);
   const [loadError, setLoadError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
   const [pickLat, setPickLat] = useState("");
   const [pickLng, setPickLng] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,7 +39,7 @@ const AdminPrograms = () => {
         if (!cancelled) {
           const msg = getApiErrorMessage(
             err,
-            "Could not load projects from the server."
+            "Could not load projects from the server.",
           );
           setLoadError(msg);
           toast.error(msg);
@@ -53,29 +60,72 @@ const AdminPrograms = () => {
 
   const countsByProgram = useMemo(
     () => countProjectsByProgramType(projects),
-    [projects]
+    [projects],
   );
 
   const withoutMapPin = useMemo(
     () => projects.filter((p) => !projectHasMapCoordinates(p)),
-    [projects]
+    [projects],
   );
 
   const handleSave = async (payload) => {
-    const created = await createProject(payload);
-    setProjects((prev) => [created, ...prev]);
+    if (payload.editingId) {
+      const { editingId, ...rest } = payload;
+      const updated = await updateProject(editingId, rest);
+      setProjects((prev) =>
+        prev.map((x) => (x.id === updated.id ? updated : x)),
+      );
+      toast.success("Project updated.");
+    } else {
+      const created = await createProject(payload);
+      setProjects((prev) => [created, ...prev]);
+      toast.success("Project saved.");
+    }
   };
 
   const openModal = () => {
+    setEditingProject(null);
     setPickLat("");
     setPickLng("");
     setModalOpen(true);
   };
 
+  const openEditModal = (p) => {
+    setEditingProject(p);
+    setPickLat(
+      p.location?.latitude != null ? String(p.location.latitude) : "",
+    );
+    setPickLng(
+      p.location?.longitude != null ? String(p.location.longitude) : "",
+    );
+    setModalOpen(true);
+  };
+
   const closeModal = () => {
     setModalOpen(false);
+    setEditingProject(null);
     setPickLat("");
     setPickLng("");
+  };
+
+  const handleDeleteRow = async (p) => {
+    if (
+      !window.confirm(
+        `Delete "${p.title}"? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setDeletingId(p.id);
+    try {
+      await deleteProject(p.id);
+      setProjects((prev) => prev.filter((x) => x.id !== p.id));
+      toast.success("Project deleted.");
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, "Could not delete project."));
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const handlePickOnMap = (lat, lng) => {
@@ -151,6 +201,114 @@ const AdminPrograms = () => {
             <AdminProgramMap projects={projects} />
           </div>
 
+          {projects.length > 0 ? (
+            <div className="mt-10">
+              <h2 className="text-lg font-semibold text-white">
+                Saved projects
+              </h2>
+              <p className="mt-1 text-sm text-white/50">
+                Mag-edit o mag-delete mula sa table. Ang Edit ay bubuksan ang
+                parehong form na may mapa.
+              </p>
+
+              <div className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
+                <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-white/10 bg-black/30 text-xs font-semibold uppercase tracking-wide text-white/55">
+                      <th className="px-3 py-3 sm:px-4">Photo</th>
+                      <th className="px-3 py-3 sm:px-4">Title</th>
+                      <th className="px-3 py-3 sm:px-4">Program</th>
+                      <th className="px-3 py-3 sm:px-4">Status</th>
+                      <th className="px-3 py-3 sm:px-4">Beneficiary</th>
+                      <th className="px-3 py-3 sm:px-4">Map pin</th>
+                      <th className="px-3 py-3 text-right sm:px-4">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {projects.map((p) => {
+                      const imgs = Array.isArray(p.images)
+                        ? p.images.filter(Boolean)
+                        : [];
+                      const accent =
+                        PROGRAM_STYLES[p.programType]?.color ?? "#22D3EE";
+                      const hasPin = projectHasMapCoordinates(p);
+                      return (
+                        <tr
+                          key={p.id}
+                          className="border-b border-white/[0.06] transition hover:bg-white/[0.04]"
+                        >
+                          <td className="px-3 py-2.5 align-middle sm:px-4">
+                            {imgs[0] ? (
+                              <img
+                                src={imgs[0]}
+                                alt=""
+                                className="h-11 w-14 rounded-lg object-cover ring-1 ring-white/10"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="flex h-11 w-14 items-center justify-center rounded-lg bg-white/5 text-[10px] text-white/35">
+                                —
+                              </div>
+                            )}
+                          </td>
+                          <td className="max-w-[200px] px-3 py-2.5 align-middle font-medium text-white sm:px-4">
+                            <span className="line-clamp-2">{p.title}</span>
+                          </td>
+                          <td className="px-3 py-2.5 align-middle sm:px-4">
+                            <span
+                              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2 py-0.5 text-[11px] font-semibold text-white/90"
+                              style={{
+                                boxShadow: `0 0 0 1px ${accent}33`,
+                              }}
+                            >
+                              <span
+                                className="h-1.5 w-1.5 rounded-full"
+                                style={{ backgroundColor: accent }}
+                              />
+                              {p.programType}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2.5 align-middle text-white/80 sm:px-4">
+                            {p.projectStatus}
+                          </td>
+                          <td className="max-w-[180px] px-3 py-2.5 align-middle text-white/65 sm:px-4">
+                            <span className="line-clamp-2">{p.beneficiary}</span>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2.5 align-middle text-xs sm:px-4">
+                            {hasPin ? (
+                              <span className="text-emerald-300/90">Yes</span>
+                            ) : (
+                              <span className="text-amber-200/80">No</span>
+                            )}
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2.5 text-right align-middle sm:px-4">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openEditModal(p)}
+                                className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/10"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                disabled={deletingId === p.id}
+                                onClick={() => handleDeleteRow(p)}
+                                className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-100/95 transition hover:bg-rose-500/20 disabled:opacity-50"
+                              >
+                                {deletingId === p.id ? "…" : "Delete"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+
           {withoutMapPin.length > 0 ? (
             <div className="mt-6 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100/90">
               <p className="font-medium text-amber-50/95">
@@ -192,6 +350,7 @@ const AdminPrograms = () => {
               longitude={pickLng}
               onLatitudeChange={setPickLat}
               onLongitudeChange={setPickLng}
+              editingProject={editingProject}
             />
           </div>
         </div>

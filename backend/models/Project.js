@@ -21,6 +21,8 @@ const projectSchema = new mongoose.Schema(
       latitude: { type: Number, default: null },
       longitude: { type: Number, default: null },
     },
+    /** Public image URLs (Supabase), optional gallery for landing / admin. */
+    images: { type: [String], default: [] },
   },
   { timestamps: true }
 );

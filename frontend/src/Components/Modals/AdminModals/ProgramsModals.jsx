@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 const PROGRAM_TYPES = ["GIA", "CEST", "SSCP", "SETUP"];
+
+const MAX_PROJECT_IMAGES = 12;
+const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
 
 const PROJECT_STATUSES = ["Ongoing", "Graduated", "Terminated"];
 
@@ -21,6 +24,7 @@ const ProgramsModals = ({
   longitude,
   onLatitudeChange,
   onLongitudeChange,
+  editingProject = null,
 }) => {
   const [programType, setProgramType] = useState("");
   const [title, setTitle] = useState("");
@@ -29,7 +33,21 @@ const ProgramsModals = ({
   const [contactPerson, setContactPerson] = useState("");
   const [briefDescription, setBriefDescription] = useState("");
   const [projectStatus, setProjectStatus] = useState("Ongoing");
+  const [imageFiles, setImageFiles] = useState([]);
+  /** Existing image URLs kept on update (edit mode). */
+  const [keptImageUrls, setKeptImageUrls] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const previewUrls = useMemo(
+    () => imageFiles.map((f) => URL.createObjectURL(f)),
+    [imageFiles]
+  );
+
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [previewUrls]);
 
   const resetForm = () => {
     setProgramType("");
@@ -39,9 +57,52 @@ const ProgramsModals = ({
     setContactPerson("");
     setBriefDescription("");
     setProjectStatus("Ongoing");
+    setImageFiles([]);
+    setKeptImageUrls([]);
     onLatitudeChange("");
     onLongitudeChange("");
   };
+
+  const resetFromEditing = () => {
+    if (!editingProject) {
+      resetForm();
+      return;
+    }
+    setProgramType(editingProject.programType || "");
+    setTitle(editingProject.title || "");
+    setAmountOfAssistance(editingProject.amountOfAssistance || "");
+    setBeneficiary(editingProject.beneficiary || "");
+    setContactPerson(editingProject.contactPerson || "");
+    setBriefDescription(editingProject.briefDescription || "");
+    setProjectStatus(editingProject.projectStatus || "Ongoing");
+    const lat = editingProject.location?.latitude;
+    const lng = editingProject.location?.longitude;
+    onLatitudeChange(lat != null ? String(lat) : "");
+    onLongitudeChange(lng != null ? String(lng) : "");
+    setKeptImageUrls(
+      Array.isArray(editingProject.images) ? [...editingProject.images] : [],
+    );
+    setImageFiles([]);
+  };
+
+  useEffect(() => {
+    if (!editingProject) return;
+    setProgramType(editingProject.programType || "");
+    setTitle(editingProject.title || "");
+    setAmountOfAssistance(editingProject.amountOfAssistance || "");
+    setBeneficiary(editingProject.beneficiary || "");
+    setContactPerson(editingProject.contactPerson || "");
+    setBriefDescription(editingProject.briefDescription || "");
+    setProjectStatus(editingProject.projectStatus || "Ongoing");
+    const lat = editingProject.location?.latitude;
+    const lng = editingProject.location?.longitude;
+    onLatitudeChange(lat != null ? String(lat) : "");
+    onLongitudeChange(lng != null ? String(lng) : "");
+    setKeptImageUrls(
+      Array.isArray(editingProject.images) ? [...editingProject.images] : [],
+    );
+    setImageFiles([]);
+  }, [editingProject]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -93,9 +154,13 @@ const ProgramsModals = ({
           latitude: lat,
           longitude: lng,
         },
+        imageFiles,
       };
+      if (editingProject) {
+        payload.editingId = editingProject.id;
+        payload.keptImageUrls = keptImageUrls;
+      }
       await onSave(payload);
-      toast.success("Project saved to the database.");
       resetForm();
       onClose();
     } catch (err) {
@@ -115,11 +180,12 @@ const ProgramsModals = ({
             id="programs-modal-title"
             className="text-lg font-semibold text-white sm:text-xl"
           >
-            Add DOST project
+            {editingProject ? "Edit DOST project" : "Add DOST project"}
           </h2>
           <p className="mt-1 text-xs text-white/55 sm:text-sm">
-            Click the map to set the pin, or type coordinates. Saved projects
-            appear on the Programs page map.
+            {editingProject
+              ? "Update details or photos. Map click still sets the pin."
+              : "Click the map to set the pin, or type coordinates. Saved projects appear on the Programs page map."}
           </p>
         </div>
         <button
@@ -245,6 +311,102 @@ const ProgramsModals = ({
               </div>
 
               <div>
+                <label htmlFor="modal-project-images" className={labelClass}>
+                  Project photos{" "}
+                  <span className="font-normal text-white/45">(optional)</span>
+                </label>
+                <p className="mb-2 text-xs text-white/45">
+                  Up to {MAX_PROJECT_IMAGES} images (JPEG, PNG, WebP, GIF), max{" "}
+                  {Math.round(MAX_IMAGE_BYTES / (1024 * 1024))} MB each. Shown on
+                  the public Programs page.
+                </p>
+                {keptImageUrls.length > 0 ? (
+                  <ul className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {keptImageUrls.map((url, idx) => (
+                      <li
+                        key={url}
+                        className="relative overflow-hidden rounded-xl border border-white/10 bg-black/30"
+                      >
+                        <img
+                          src={url}
+                          alt=""
+                          className="aspect-[4/3] h-full w-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setKeptImageUrls((prev) =>
+                              prev.filter((_, i) => i !== idx),
+                            )
+                          }
+                          className="absolute right-1 top-1 rounded-md bg-black/70 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-black/90"
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <input
+                  id="modal-project-images"
+                  name="images"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  multiple
+                  className="block w-full text-sm text-white/80 file:mr-3 file:rounded-lg file:border-0 file:bg-[#0054A6]/30 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#0054A6]/45"
+                  onChange={(e) => {
+                    const picked = Array.from(e.target.files || []);
+                    e.target.value = "";
+                    const oversized = picked.filter((f) => f.size > MAX_IMAGE_BYTES);
+                    if (oversized.length > 0) {
+                      toast.error(
+                        `Each image must be under ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))} MB.`
+                      );
+                      return;
+                    }
+                    const cap = MAX_PROJECT_IMAGES - keptImageUrls.length;
+                    setImageFiles((prev) => {
+                      const next = [...prev, ...picked].slice(0, cap);
+                      if (prev.length + picked.length > cap) {
+                        toast.error(
+                          `Max ${MAX_PROJECT_IMAGES} images total (including saved photos).`
+                        );
+                      }
+                      return next;
+                    });
+                  }}
+                />
+                {imageFiles.length > 0 ? (
+                  <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {imageFiles.map((file, idx) => (
+                      <li
+                        key={`${file.name}-${file.size}-${idx}`}
+                        className="relative overflow-hidden rounded-xl border border-white/10 bg-black/30"
+                      >
+                        <img
+                          src={previewUrls[idx]}
+                          alt=""
+                          className="aspect-[4/3] h-full w-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setImageFiles((prev) => prev.filter((_, i) => i !== idx))
+                          }
+                          className="absolute right-1 top-1 rounded-md bg-black/70 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-black/90"
+                        >
+                          Remove
+                        </button>
+                        <div className="truncate px-1.5 py-1 text-[10px] text-white/50">
+                          {file.name}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+
+              <div>
                 <label htmlFor="modal-project-status" className={labelClass}>
                   Project status
                 </label>
@@ -322,12 +484,17 @@ const ProgramsModals = ({
             disabled={submitting || !programType}
             className="rounded-xl bg-gradient-to-r from-[#0054A6] to-[#0B3B76] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0054A6]/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? "Saving…" : "Save project"}
+            {submitting
+              ? "Saving…"
+              : editingProject
+                ? "Update project"
+                : "Save project"}
           </button>
           <button
             type="button"
             onClick={() => {
-              resetForm();
+              if (editingProject) resetFromEditing();
+              else resetForm();
             }}
             className="rounded-xl border border-white/15 bg-transparent px-6 py-3 text-sm font-medium text-white/80 transition hover:bg-white/5"
           >

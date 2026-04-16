@@ -196,6 +196,9 @@ const Programs = () => {
             projects.map((proj) => {
               const meta = programMeta[proj.programType];
               const accent = meta?.color ?? "#22D3EE";
+              const imgs = Array.isArray(proj.images)
+                ? proj.images.filter(Boolean)
+                : [];
               return (
                 <article
                   key={proj.id}
@@ -205,6 +208,22 @@ const Programs = () => {
                     className="pointer-events-none absolute -left-16 -top-16 h-40 w-40 rounded-full blur-3xl opacity-60 transition group-hover:opacity-80"
                     style={{ background: `${accent}33` }}
                   />
+
+                  {imgs[0] ? (
+                    <div className="relative -mx-5 -mt-5 mb-4 h-36 overflow-hidden sm:h-40">
+                      <img
+                        src={imgs[0]}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                      {imgs.length > 1 ? (
+                        <span className="absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-semibold text-white/95">
+                          +{imgs.length - 1} more
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
 
                   <div className="relative flex items-start justify-between gap-3">
                     <div className="text-left">
@@ -239,12 +258,14 @@ const Programs = () => {
                       </div>
                     </div>
 
-                    <div
-                      className="mt-1 h-10 w-10 rounded-2xl border border-white/10 bg-white/5"
-                      style={{
-                        boxShadow: `0 0 0 1px rgba(255,255,255,.06), 0 18px 40px ${accent}22`,
-                      }}
-                    />
+                    {!imgs[0] ? (
+                      <div
+                        className="mt-1 h-10 w-10 shrink-0 rounded-2xl border border-white/10 bg-white/5"
+                        style={{
+                          boxShadow: `0 0 0 1px rgba(255,255,255,.06), 0 18px 40px ${accent}22`,
+                        }}
+                      />
+                    ) : null}
                   </div>
 
                   {proj.briefDescription ? (

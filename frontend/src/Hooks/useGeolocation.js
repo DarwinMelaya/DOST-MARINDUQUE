@@ -2,17 +2,31 @@ import { useEffect, useState } from "react";
 
 /**
  * Browser geolocation (watch). Returns latest lat/lng + accuracy for map layers.
+ * @param {GeolocationPositionOptions & { enabled?: boolean }} [options] — set `enabled: false` to skip watching (no permission prompt).
  */
 export function useGeolocation(options = {}) {
+  const { enabled = true, ...geoOptions } = options;
+
   const [state, setState] = useState({
     lat: null,
     lng: null,
     accuracy: null,
     error: null,
-    loading: true,
+    loading: enabled,
   });
 
   useEffect(() => {
+    if (!enabled) {
+      setState({
+        lat: null,
+        lng: null,
+        accuracy: null,
+        error: null,
+        loading: false,
+      });
+      return undefined;
+    }
+
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       setState((s) => ({
         ...s,
@@ -50,13 +64,13 @@ export function useGeolocation(options = {}) {
         enableHighAccuracy: true,
         maximumAge: 30_000,
         timeout: 20_000,
-        ...options,
+        ...geoOptions,
       }
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- options are optional overrides; stable watch is enough
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- geoOptions are optional overrides; stable watch is enough
+  }, [enabled]);
 
   return state;
 }

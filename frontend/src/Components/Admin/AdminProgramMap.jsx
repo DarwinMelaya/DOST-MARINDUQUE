@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useGeolocation } from "../../Hooks/useGeolocation";
 import {
-  Circle,
   MapContainer,
   Marker,
   Popup,
@@ -51,6 +50,7 @@ function MapClickPick({ onPick, active }) {
  * @param {{ lat: number, lng: number } | null} [props.pickerPosition]
  * @param {string} [props.className]
  * @param {boolean} [props.splitLayout] — when true, map fills a flex parent (modal split view)
+ * @param {boolean} [props.showUserLocation] — GPS "you are here" + accuracy ring (off on admin by default)
  */
 const AdminProgramMap = ({
   projects,
@@ -59,8 +59,9 @@ const AdminProgramMap = ({
   pickerPosition = null,
   className = "",
   splitLayout = false,
+  showUserLocation = false,
 }) => {
-  const geo = useGeolocation();
+  const geo = useGeolocation({ enabled: showUserLocation });
   const userLocation =
     geo.lat != null &&
     geo.lng != null &&
@@ -132,13 +133,17 @@ const AdminProgramMap = ({
             {sitesOnMap.length} on map
           </div>
           <div className="max-w-[min(100vw-2rem,240px)] text-right text-[10px] leading-tight text-white/50">
-            {geo.loading ? (
-              <span className="text-sky-300/90">Finding your location…</span>
-            ) : geo.error ? (
-              <span title={geo.error}>Location: {geo.error}</span>
-            ) : userLocation ? (
-              <span className="text-emerald-300/90">Your location is on the map</span>
-            ) : null}
+            {showUserLocation ? (
+              geo.loading ? (
+                <span className="text-sky-300/90">Finding your location…</span>
+              ) : geo.error ? (
+                <span title={geo.error}>Location: {geo.error}</span>
+              ) : userLocation ? (
+                <span className="text-emerald-300/90">Your location is on the map</span>
+              ) : null
+            ) : (
+              <span className="text-white/40">Project pins only</span>
+            )}
           </div>
         </div>
       </div>
@@ -171,19 +176,9 @@ const AdminProgramMap = ({
             onPick={onPickLocation}
           />
 
-          <Circle
-            center={center}
-            radius={12000}
-            pathOptions={{
-              color: "#22D3EE",
-              weight: 2,
-              opacity: 0.9,
-              fillColor: "#0054A6",
-              fillOpacity: 0.18,
-            }}
-          />
-
-          <MapUserLocation position={userLocation} bounds={bounds} />
+          {showUserLocation ? (
+            <MapUserLocation position={userLocation} bounds={bounds} />
+          ) : null}
 
           {sitesOnMap.map((site) => {
             const style =
@@ -208,6 +203,20 @@ const AdminProgramMap = ({
                 <Popup>
                   <div style={{ minWidth: 240, color: "#0f172a" }}>
                     <div style={{ fontWeight: 800 }}>{site.title}</div>
+                    {Array.isArray(site.images) && site.images[0] ? (
+                      <img
+                        src={site.images[0]}
+                        alt=""
+                        style={{
+                          width: "100%",
+                          maxHeight: 140,
+                          objectFit: "cover",
+                          borderRadius: 8,
+                          marginTop: 8,
+                          display: "block",
+                        }}
+                      />
+                    ) : null}
                     <div style={{ marginTop: 8, fontSize: 13, lineHeight: 1.5 }}>
                       <div>
                         Program: <b>{site.programType}</b>

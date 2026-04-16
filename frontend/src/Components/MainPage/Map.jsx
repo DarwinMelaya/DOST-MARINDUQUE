@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import {
-  Circle,
   MapContainer,
   Marker,
   Popup,
   TileLayer,
   Tooltip,
+  useMap,
 } from "react-leaflet";
 import L from "leaflet";
 
@@ -31,7 +31,37 @@ const PSTO_OFFICE_SITE = {
   coordinates: [13.440439852331924, 121.82847833221463],
 };
 
+function getFullscreenElement() {
+  return (
+    document.fullscreenElement ||
+    document.webkitFullscreenElement ||
+    document.mozFullScreenElement ||
+    null
+  );
+}
+
+/** Leaflet must recalc size after the map container enters/exits fullscreen. */
+function MapInvalidateOnFullscreen() {
+  const map = useMap();
+  useEffect(() => {
+    const fix = () => {
+      window.requestAnimationFrame(() => {
+        map.invalidateSize({ animate: false });
+      });
+    };
+    document.addEventListener("fullscreenchange", fix);
+    document.addEventListener("webkitfullscreenchange", fix);
+    return () => {
+      document.removeEventListener("fullscreenchange", fix);
+      document.removeEventListener("webkitfullscreenchange", fix);
+    };
+  }, [map]);
+  return null;
+}
+
 const Map = () => {
+  const rootRef = useRef(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const geo = useGeolocation();
   const userLocation =
     geo.lat != null &&
@@ -162,8 +192,46 @@ const Map = () => {
     fixLeafletDefaultIcons();
   }, []);
 
+  useEffect(() => {
+    const sync = () => {
+      const el = rootRef.current;
+      const fsEl = getFullscreenElement();
+      setIsFullscreen(Boolean(el && fsEl === el));
+    };
+    document.addEventListener("fullscreenchange", sync);
+    document.addEventListener("webkitfullscreenchange", sync);
+    sync();
+    return () => {
+      document.removeEventListener("fullscreenchange", sync);
+      document.removeEventListener("webkitfullscreenchange", sync);
+    };
+  }, []);
+
+  const toggleFullscreen = async () => {
+    const el = rootRef.current;
+    if (!el) return;
+    try {
+      if (getFullscreenElement()) {
+        if (document.exitFullscreen) await document.exitFullscreen();
+        else if (document.webkitExitFullscreen)
+          await document.webkitExitFullscreen();
+      } else if (el.requestFullscreen) {
+        await el.requestFullscreen();
+      } else if (el.webkitRequestFullscreen) {
+        await el.webkitRequestFullscreen();
+      }
+    } catch {
+      // Denied or unsupported
+    }
+  };
+
   return (
-    <div className="relative min-h-screen w-full overflow-hidden border-y border-white/10 bg-black/40 backdrop-blur">
+    <div
+      ref={rootRef}
+      className={`relative w-full overflow-hidden border-y border-white/10 bg-black/40 backdrop-blur ${
+        isFullscreen ? "min-h-screen h-screen" : "min-h-screen"
+      }`}
+    >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(34,211,238,.18),transparent_55%)]" />
       <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:linear-gradient(to_right,rgba(99,179,237,.30)_1px,transparent_1px),linear-gradient(to_bottom,rgba(99,179,237,.20)_1px,transparent_1px)] [background-size:48px_48px]" />
 
@@ -203,6 +271,40 @@ const Map = () => {
                 {activeFilterCount}
               </span>
             ) : null}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void toggleFullscreen()}
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 sm:h-11 sm:px-4 sm:text-sm"
+            aria-pressed={isFullscreen}
+            title={isFullscreen ? "Exit fullscreen" : "View map fullscreen"}
+            aria-label={isFullscreen ? "Exit fullscreen" : "View map fullscreen"}
+          >
+            {isFullscreen ? (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="h-4 w-4"
+                aria-hidden
+              >
+                <path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z" />
+              </svg>
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="h-4 w-4"
+                aria-hidden
+              >
+                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
+              </svg>
+            )}
+            <span className="hidden sm:inline">
+              {isFullscreen ? "Exit" : "Fullscreen"}
+            </span>
           </button>
 
           <div className="flex flex-col items-end gap-1">
@@ -339,6 +441,7 @@ const Map = () => {
           attributionControl={false}
           className="h-full w-full"
         >
+          <MapInvalidateOnFullscreen />
           <TileLayer
             // Dark theme tiles for a "technology look"
             // Provider: CartoDB Dark Matter
