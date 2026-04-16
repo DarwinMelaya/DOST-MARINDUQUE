@@ -24,6 +24,7 @@ const {
   updateCoralReef,
   deleteCoralReef,
 } = require("./controllers/coralReefsController");
+const { getAdminDashboard } = require("./controllers/adminDashboardController");
 
 const announcementImages = multer({
   storage: multer.memoryStorage(),
@@ -167,6 +168,8 @@ app.get("/api/coral-reefs", listCoralReefs);
 app.post("/api/coral-reefs", requireAdmin, coralReefMultipart, createCoralReef);
 app.patch("/api/coral-reefs/:id", requireAdmin, coralReefMultipart, updateCoralReef);
 app.delete("/api/coral-reefs/:id", requireAdmin, deleteCoralReef);
+
+app.get("/api/admin/dashboard", requireAdmin, getAdminDashboard);
 
 app.get("/api/announcements/featured", getFeaturedAnnouncement);
 app.get("/api/announcements", requireAdmin, listAnnouncements);
