@@ -156,6 +156,33 @@ const Sidebar = ({ mobileOpen = false, onClose }) => {
           </span>
           Posts
         </NavLink>
+
+        <NavLink
+          to="/admin-coral-reef-mapping"
+          className={navClass}
+          onClick={() => onClose?.()}
+        >
+          <span
+            className="grid h-8 w-8 place-items-center rounded-lg bg-[#0054A6]/25 text-[#7dd3fc]"
+            aria-hidden
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="h-4 w-4"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 20.25h12M6.75 3.75h10.5A2.25 2.25 0 0119.5 6v8.25a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 14.25V6a2.25 2.25 0 012.25-2.25zM9 7.5h6m-6 3h4.5"
+              />
+            </svg>
+          </span>
+          Coral Reef Mapping
+        </NavLink>
       </nav>
 
       <div className="mt-auto border-t border-white/10 p-4">

@@ -8,6 +8,7 @@ import {
   Login,
   SignUp,
   AdminPost,
+  CoralReefMapping,
 } from "../pages";
 
 export const Routers = () => {
@@ -23,6 +24,10 @@ export const Routers = () => {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin-programs" element={<AdminPrograms />} />
             <Route path="/admin-post" element={<AdminPost />} />
+            <Route
+              path="/admin-coral-reef-mapping"
+              element={<CoralReefMapping />}
+            />
           </Route>
         </Route>
       </Routes>
