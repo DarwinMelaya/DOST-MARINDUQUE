@@ -5,6 +5,7 @@ import {
   createCoralReef,
   deleteCoralReef,
   fetchCoralReefs,
+  updateCoralReef,
 } from "../../api/coralReefsApi";
 import { getApiErrorMessage } from "../../api/client";
 import CoralReefMap from "../../Components/Admin/CoralReefMap";
@@ -14,6 +15,7 @@ const CoralReefMapping = () => {
   const [records, setRecords] = useState([]);
   const [loadError, setLoadError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState(null);
   const [pickLat, setPickLat] = useState("");
   const [pickLng, setPickLng] = useState("");
   const [pickAreaCoordinates, setPickAreaCoordinates] = useState([]);
@@ -46,6 +48,13 @@ const CoralReefMapping = () => {
   }, []);
 
   const handleSave = async (payload) => {
+    if (editingRecord?.id) {
+      const updated = await updateCoralReef(editingRecord.id, payload);
+      setRecords((prev) =>
+        prev.map((item) => (item.id === updated.id ? updated : item))
+      );
+      return;
+    }
     const created = await createCoralReef(payload);
     setRecords((prev) => [created, ...prev]);
   };
@@ -58,6 +67,7 @@ const CoralReefMapping = () => {
   }, [pickLat, pickLng]);
 
   const openModal = () => {
+    setEditingRecord(null);
     setPickLat("");
     setPickLng("");
     setPickAreaCoordinates([]);
@@ -65,8 +75,24 @@ const CoralReefMapping = () => {
     setModalOpen(true);
   };
 
+  const openEditModal = (record) => {
+    setEditingRecord(record);
+    const lat =
+      record?.location?.latitude != null ? Number(record.location.latitude) : null;
+    const lng =
+      record?.location?.longitude != null ? Number(record.location.longitude) : null;
+    setPickLat(lat == null || Number.isNaN(lat) ? "" : lat.toFixed(6));
+    setPickLng(lng == null || Number.isNaN(lng) ? "" : lng.toFixed(6));
+    setPickAreaCoordinates(
+      Array.isArray(record?.areaCoordinates) ? record.areaCoordinates : []
+    );
+    setDrawMode(false);
+    setModalOpen(true);
+  };
+
   const closeModal = () => {
     setModalOpen(false);
+    setEditingRecord(null);
     setPickLat("");
     setPickLng("");
     setPickAreaCoordinates([]);
@@ -89,6 +115,15 @@ const CoralReefMapping = () => {
 
   const handleUndoLastPoint = () => {
     setPickAreaCoordinates((prev) => prev.slice(0, -1));
+  };
+
+  const handleMoveDraftPoint = (index, lat, lng) => {
+    setPickAreaCoordinates((prev) => {
+      if (index < 0 || index >= prev.length) return prev;
+      const next = [...prev];
+      next[index] = { latitude: lat, longitude: lng };
+      return next;
+    });
   };
 
   const handleClearArea = () => {
@@ -152,12 +187,23 @@ const CoralReefMapping = () => {
               onToggleDrawMode={toggleDrawMode}
               draftAreaCoordinates={pickAreaCoordinates}
               onUndoLastPoint={handleUndoLastPoint}
+              enableDraftPointDrag={Boolean(editingRecord)}
+              onMoveDraftPoint={handleMoveDraftPoint}
             />
           </div>
           <div className="flex min-h-0 w-full min-w-0 flex-[0.95] flex-col border-t border-white/10 md:max-w-xl md:border-l md:border-t-0 lg:max-w-lg">
             <AddCoralReefModal
               onClose={closeModal}
               onSave={handleSave}
+              mode={editingRecord ? "edit" : "add"}
+              initialValues={editingRecord}
+              existingPhotoUrls={
+                Array.isArray(editingRecord?.photos) && editingRecord.photos.length > 0
+                  ? editingRecord.photos
+                  : typeof editingRecord?.photo === "string" && editingRecord.photo
+                    ? [editingRecord.photo]
+                    : []
+              }
               latitude={pickLat}
               longitude={pickLng}
               onLatitudeChange={setPickLat}
@@ -191,6 +237,13 @@ const CoralReefMapping = () => {
                 </thead>
                 <tbody>
                   {records.map((record) => {
+                    const photos =
+                      Array.isArray(record.photos) && record.photos.length > 0
+                        ? record.photos
+                        : typeof record.photo === "string" && record.photo
+                          ? [record.photo]
+                          : [];
+                    const firstPhoto = photos[0] || "";
                     const hasCoordinates =
                       record.location?.latitude != null &&
                       record.location?.longitude != null;
@@ -200,13 +253,20 @@ const CoralReefMapping = () => {
                         className="border-b border-white/[0.06] transition hover:bg-white/[0.04]"
                       >
                         <td className="px-3 py-2.5 align-middle sm:px-4">
-                          {record.photo ? (
-                            <img
-                              src={record.photo}
-                              alt=""
-                              className="h-11 w-14 rounded-lg object-cover ring-1 ring-white/10"
-                              loading="lazy"
-                            />
+                          {firstPhoto ? (
+                            <div className="relative inline-block">
+                              <img
+                                src={firstPhoto}
+                                alt=""
+                                className="h-11 w-14 rounded-lg object-cover ring-1 ring-white/10"
+                                loading="lazy"
+                              />
+                              {photos.length > 1 ? (
+                                <span className="absolute -right-1.5 -top-1.5 rounded-full border border-white/10 bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white/85">
+                                  +{photos.length - 1}
+                                </span>
+                              ) : null}
+                            </div>
                           ) : (
                             <div className="flex h-11 w-14 items-center justify-center rounded-lg bg-white/5 text-[10px] text-white/35">
                               -
@@ -239,6 +299,13 @@ const CoralReefMapping = () => {
                             : "No drawn area"}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2.5 text-right align-middle sm:px-4">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(record)}
+                            className="mr-2 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/85 transition hover:bg-white/10"
+                          >
+                            Edit
+                          </button>
                           <button
                             type="button"
                             disabled={deletingId === record.id}

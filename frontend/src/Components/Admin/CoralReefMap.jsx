@@ -62,6 +62,8 @@ const CoralReefMap = ({
   onToggleDrawMode,
   draftAreaCoordinates = [],
   onUndoLastPoint,
+  enableDraftPointDrag = false,
+  onMoveDraftPoint,
 }) => {
   const center = useMemo(() => L.latLng(13.4463, 122.0837), []);
 
@@ -138,6 +140,11 @@ const CoralReefMap = ({
             >
               Undo point
             </button>
+            {enableDraftPointDrag ? (
+              <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 sm:inline-flex">
+                Drag points to adjust
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 sm:inline-flex">
@@ -175,6 +182,13 @@ const CoralReefMap = ({
           {mappedRecords.map((record) => {
             const style = STATUS_STYLES[record.coralStatus] ?? STATUS_STYLES.Recovering;
             const areaLatLngs = normalizeAreaCoordinates(record.areaCoordinates);
+            const photos =
+              Array.isArray(record.photos) && record.photos.length > 0
+                ? record.photos
+                : typeof record.photo === "string" && record.photo
+                  ? [record.photo]
+                  : [];
+            const firstPhoto = photos[0] || "";
             return (
               <LayerGroup key={record.id}>
                 {areaLatLngs.length >= 3 ? (
@@ -204,9 +218,9 @@ const CoralReefMap = ({
                   <Popup>
                     <div style={{ minWidth: 240, color: "#0f172a" }}>
                       <div style={{ fontWeight: 800 }}>{record.coralName}</div>
-                      {record.photo ? (
+                      {firstPhoto ? (
                         <img
-                          src={record.photo}
+                          src={firstPhoto}
                           alt=""
                           style={{
                             width: "100%",
@@ -224,6 +238,9 @@ const CoralReefMap = ({
                         </div>
                         <div>
                           Status: <b>{record.coralStatus}</b>
+                        </div>
+                        <div>
+                          Photos: <b>{photos.length}</b>
                         </div>
                         <div>
                           Area points: <b>{areaLatLngs.length}</b>
@@ -259,6 +276,18 @@ const CoralReefMap = ({
             <Marker
               key={`draft-area-${idx}`}
               position={point}
+              draggable={Boolean(enableDraftPointDrag && onMoveDraftPoint)}
+              eventHandlers={
+                enableDraftPointDrag && onMoveDraftPoint
+                  ? {
+                      dragend(e) {
+                        const ll = e?.target?.getLatLng?.();
+                        if (!ll) return;
+                        onMoveDraftPoint(idx, ll.lat, ll.lng);
+                      },
+                    }
+                  : undefined
+              }
               icon={createProgramDivIcon({
                 label: String(idx + 1),
                 color: "#FDB913",

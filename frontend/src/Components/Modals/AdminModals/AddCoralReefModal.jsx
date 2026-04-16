@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 
 const CORAL_STATUSES = ["Healthy", "Bleached Damaged", "Recovering", "Dead"];
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
+const MAX_PHOTOS = 3;
 
 const inputClass =
   "w-full rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-white outline-none ring-[#0054A6] transition placeholder:text-white/35 focus:border-[#0054A6]/50 focus:ring-2";
@@ -12,6 +13,9 @@ const labelClass = "mb-1.5 block text-sm font-medium text-white/80";
 const AddCoralReefModal = ({
   onClose,
   onSave,
+  mode = "add",
+  initialValues = null,
+  existingPhotoUrls = [],
   latitude,
   longitude,
   onLatitudeChange,
@@ -24,19 +28,39 @@ const AddCoralReefModal = ({
   const [coralType, setCoralType] = useState("");
   const [description, setDescription] = useState("");
   const [coralStatus, setCoralStatus] = useState("Healthy");
-  const [photoFile, setPhotoFile] = useState(null);
+  const [photoFiles, setPhotoFiles] = useState([]);
+  const [keptExistingPhotoUrls, setKeptExistingPhotoUrls] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const previewUrl = useMemo(
-    () => (photoFile ? URL.createObjectURL(photoFile) : ""),
-    [photoFile]
-  );
+  useEffect(() => {
+    if (mode === "edit" && initialValues) {
+      setCoralName(initialValues.coralName ?? "");
+      setCoralType(initialValues.coralType ?? "");
+      setDescription(initialValues.description ?? "");
+      setCoralStatus(initialValues.coralStatus ?? "Healthy");
+      setPhotoFiles([]);
+      setKeptExistingPhotoUrls(
+        Array.isArray(existingPhotoUrls) ? existingPhotoUrls.slice(0, MAX_PHOTOS) : []
+      );
+      return;
+    }
+    if (mode === "add") {
+      setCoralName("");
+      setCoralType("");
+      setDescription("");
+      setCoralStatus("Healthy");
+      setPhotoFiles([]);
+      setKeptExistingPhotoUrls([]);
+    }
+  }, [existingPhotoUrls, initialValues, mode]);
+
+  const previewUrls = useMemo(() => photoFiles.map((f) => URL.createObjectURL(f)), [photoFiles]);
 
   useEffect(() => {
     return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      for (const url of previewUrls) URL.revokeObjectURL(url);
     };
-  }, [previewUrl]);
+  }, [previewUrls]);
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -47,13 +71,37 @@ const AddCoralReefModal = ({
   }, [onClose, submitting]);
 
   const resetForm = () => {
+    if (mode === "edit" && initialValues) {
+      setCoralName(initialValues.coralName ?? "");
+      setCoralType(initialValues.coralType ?? "");
+      setDescription(initialValues.description ?? "");
+      setCoralStatus(initialValues.coralStatus ?? "Healthy");
+      onLatitudeChange(
+        initialValues.location?.latitude != null
+          ? String(Number(initialValues.location.latitude).toFixed(6))
+          : ""
+      );
+      onLongitudeChange(
+        initialValues.location?.longitude != null
+          ? String(Number(initialValues.location.longitude).toFixed(6))
+          : ""
+      );
+      if (onClearArea) onClearArea();
+      setPhotoFiles([]);
+      setKeptExistingPhotoUrls(
+        Array.isArray(existingPhotoUrls) ? existingPhotoUrls.slice(0, MAX_PHOTOS) : []
+      );
+      return;
+    }
     setCoralName("");
     setCoralType("");
     setDescription("");
     setCoralStatus("Healthy");
     onLatitudeChange("");
     onLongitudeChange("");
-    setPhotoFile(null);
+    if (onClearArea) onClearArea();
+    setPhotoFiles([]);
+    setKeptExistingPhotoUrls([]);
   };
 
   const handleSubmit = async (e) => {
@@ -90,11 +138,12 @@ const AddCoralReefModal = ({
           longitude: lng,
         },
         areaCoordinates,
-        photoFile,
+        photoFiles,
+        keptPhotoUrls: mode === "edit" ? keptExistingPhotoUrls : undefined,
       });
 
-      toast.success("Coral reef entry added.");
-      resetForm();
+      toast.success(mode === "edit" ? "Coral reef entry updated." : "Coral reef entry added.");
+      if (mode !== "edit") resetForm();
       onClose();
     } catch (err) {
       toast.error(err.response?.data?.message || "Could not save coral reef entry.");
@@ -108,10 +157,12 @@ const AddCoralReefModal = ({
       <div className="flex shrink-0 items-start justify-between gap-4 border-b border-white/10 px-5 py-4 sm:px-6">
         <div>
           <h2 className="text-lg font-semibold text-white sm:text-xl">
-            Add coral reef record
+            {mode === "edit" ? "Edit coral reef record" : "Add coral reef record"}
           </h2>
           <p className="mt-1 text-xs text-white/55 sm:text-sm">
-            Save coral details, status, photo, and map coordinates.
+            {mode === "edit"
+              ? "Update coral details, status, photo, and mapped area."
+              : "Save coral details, status, photo, and map coordinates."}
           </p>
         </div>
         <button
@@ -188,32 +239,111 @@ const AddCoralReefModal = ({
 
           <div>
             <label className={labelClass} htmlFor="coral-photo">
-              Coral photo <span className="font-normal text-white/45">(optional)</span>
+              Coral photos <span className="font-normal text-white/45">(optional)</span>
             </label>
             <p className="mb-2 text-xs text-white/45">
-              JPEG, PNG, WebP, or GIF. Max {Math.round(MAX_IMAGE_BYTES / (1024 * 1024))} MB.
+              JPEG, PNG, WebP, or GIF. Max {Math.round(MAX_IMAGE_BYTES / (1024 * 1024))} MB each. Up to {MAX_PHOTOS} photos.
             </p>
+            {mode === "edit" && keptExistingPhotoUrls.length > 0 ? (
+              <div className="mb-3">
+                <div className="flex items-center justify-between gap-2 text-xs text-white/70">
+                  <span>
+                    Existing photos:{" "}
+                    <span className="font-semibold text-white/90">
+                      {keptExistingPhotoUrls.length}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setKeptExistingPhotoUrls([])}
+                    disabled={submitting}
+                    className="rounded-md border border-white/15 px-2.5 py-1 text-[11px] font-medium text-white/80 transition hover:bg-white/5 disabled:opacity-50"
+                  >
+                    Remove all existing
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <input
               id="coral-photo"
               type="file"
+              multiple
               accept="image/jpeg,image/png,image/webp,image/gif"
               className="block w-full text-sm text-white/80 file:mr-3 file:rounded-lg file:border-0 file:bg-[#0054A6]/30 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#0054A6]/45"
               onChange={(e) => {
-                const picked = e.target.files?.[0] || null;
+                const picked = Array.from(e.target.files || []);
                 e.target.value = "";
-                if (!picked) return;
-                if (picked.size > MAX_IMAGE_BYTES) {
-                  toast.error(
-                    `Image must be under ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))} MB.`
-                  );
-                  return;
+                if (picked.length === 0) return;
+                const next = [];
+                for (const file of picked) {
+                  if (file.size > MAX_IMAGE_BYTES) {
+                    toast.error(
+                      `Each image must be under ${Math.round(MAX_IMAGE_BYTES / (1024 * 1024))} MB.`
+                    );
+                    return;
+                  }
+                  next.push(file);
                 }
-                setPhotoFile(picked);
+                setPhotoFiles((prev) => {
+                  const allowedSlots = Math.max(
+                    0,
+                    MAX_PHOTOS - (mode === "edit" ? keptExistingPhotoUrls.length : 0)
+                  );
+                  const merged = [...prev, ...next].slice(0, allowedSlots);
+                  if (prev.length + next.length > allowedSlots) {
+                    toast.error(`You can upload up to ${MAX_PHOTOS} photos only.`);
+                  }
+                  return merged;
+                });
               }}
             />
-            {previewUrl ? (
-              <div className="mt-3 w-full max-w-xs overflow-hidden rounded-xl border border-white/10 bg-black/30">
-                <img src={previewUrl} alt="" className="aspect-[4/3] w-full object-cover" />
+            {previewUrls.length > 0 ? (
+              <div className="mt-3 grid w-full grid-cols-3 gap-2">
+                {previewUrls.map((url, idx) => (
+                  <div
+                    key={url}
+                    className="relative overflow-hidden rounded-xl border border-white/10 bg-black/30"
+                  >
+                    <img src={url} alt="" className="aspect-[4/3] w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPhotoFiles((prev) => prev.filter((_, i) => i !== idx))
+                      }
+                      className="absolute right-1.5 top-1.5 rounded-md border border-white/15 bg-black/60 px-2 py-1 text-[11px] font-semibold text-white/85 hover:bg-black/75"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : mode === "edit" &&
+              Array.isArray(keptExistingPhotoUrls) &&
+              keptExistingPhotoUrls.length > 0 ? (
+              <div className="mt-3 grid w-full grid-cols-3 gap-2">
+                {keptExistingPhotoUrls.slice(0, MAX_PHOTOS).map((url) => (
+                  <div
+                    key={url}
+                    className="relative overflow-hidden rounded-xl border border-white/10 bg-black/30"
+                  >
+                    <img
+                      src={url}
+                      alt=""
+                      className="aspect-[4/3] w-full object-cover"
+                      loading="lazy"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setKeptExistingPhotoUrls((prev) => prev.filter((p) => p !== url))
+                      }
+                      disabled={submitting}
+                      className="absolute right-1.5 top-1.5 rounded-md border border-white/15 bg-black/60 px-2 py-1 text-[11px] font-semibold text-white/85 hover:bg-black/75 disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
               </div>
             ) : null}
           </div>
@@ -275,7 +405,7 @@ const AddCoralReefModal = ({
             disabled={submitting}
             className="rounded-xl bg-gradient-to-r from-[#0054A6] to-[#0B3B76] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0054A6]/25 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? "Saving..." : "Save record"}
+            {submitting ? "Saving..." : mode === "edit" ? "Update record" : "Save record"}
           </button>
           <button
             type="button"

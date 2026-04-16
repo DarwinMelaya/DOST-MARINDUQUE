@@ -23,7 +23,7 @@ const coralReefSchema = new mongoose.Schema(
       ],
       default: [],
     },
-    photo: { type: String, default: "" },
+    photos: { type: [String], default: [] },
   },
   { timestamps: true }
 );

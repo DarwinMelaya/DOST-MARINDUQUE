@@ -8,6 +8,12 @@ const {
 function serialize(doc) {
   const o =
     doc && typeof doc.toObject === "function" ? doc.toObject() : { ...doc };
+  let photos = Array.isArray(o.photos)
+    ? o.photos.map((u) => String(u || "").trim()).filter(Boolean)
+    : [];
+  if (photos.length === 0 && typeof o.photo === "string" && o.photo.trim()) {
+    photos = [o.photo.trim()];
+  }
   return {
     id: String(o._id),
     coralName: o.coralName,
@@ -35,7 +41,7 @@ function serialize(doc) {
           })
           .filter(Boolean)
       : [],
-    photo: o.photo ?? "",
+    photos,
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,
   };
@@ -48,6 +54,7 @@ function normalizeBody(req) {
   }
   let location = null;
   let areaCoordinates = [];
+  let keptPhotoUrls = undefined;
   if (typeof req.body.location === "string" && req.body.location.trim()) {
     try {
       location = JSON.parse(req.body.location);
@@ -69,6 +76,15 @@ function normalizeBody(req) {
   } else if (Array.isArray(req.body.areaCoordinates)) {
     areaCoordinates = req.body.areaCoordinates;
   }
+  if (typeof req.body.keptPhotoUrls === "string" && req.body.keptPhotoUrls.trim()) {
+    try {
+      keptPhotoUrls = JSON.parse(req.body.keptPhotoUrls);
+    } catch {
+      keptPhotoUrls = undefined;
+    }
+  } else if (Array.isArray(req.body.keptPhotoUrls)) {
+    keptPhotoUrls = req.body.keptPhotoUrls;
+  }
   return {
     coralName: req.body.coralName,
     coralType: req.body.coralType,
@@ -76,7 +92,20 @@ function normalizeBody(req) {
     coralStatus: req.body.coralStatus,
     location,
     areaCoordinates,
+    keptPhotoUrls,
   };
+}
+
+function parseKeptPhotoUrls(keptPhotoUrls) {
+  if (keptPhotoUrls === undefined) return { keep: undefined };
+  if (!Array.isArray(keptPhotoUrls)) {
+    return { error: "keptPhotoUrls must be an array of photo URLs." };
+  }
+  const keep = keptPhotoUrls.map((u) => String(u || "").trim()).filter(Boolean);
+  if (keep.length > 3) {
+    return { error: "You can keep up to 3 photos only." };
+  }
+  return { keep };
 }
 
 function parseLocation(location) {
@@ -173,13 +202,12 @@ async function createCoralReef(req, res) {
       return res.status(400).json({ message: v.error });
     }
 
-    const fileList = req.files?.photo;
-    const photoFile = Array.isArray(fileList) ? fileList[0] : null;
-    let photoUrl = "";
-    if (photoFile) {
+    const photoFiles = Array.isArray(req.files?.photos) ? req.files.photos : [];
+    let photoUrls = [];
+    if (photoFiles.length > 0) {
       try {
-        const uploaded = await uploadImageFilesToSupabase([photoFile], "coral-reefs");
-        photoUrl = uploaded[0] || "";
+        const uploaded = await uploadImageFilesToSupabase(photoFiles, "coral-reefs");
+        photoUrls = Array.isArray(uploaded) ? uploaded.filter(Boolean) : [];
       } catch (e) {
         console.error(e);
         return res.status(503).json({
@@ -190,12 +218,95 @@ async function createCoralReef(req, res) {
 
     const doc = await CoralReef.create({
       ...v.values,
-      photo: photoUrl,
+      photos: photoUrls.slice(0, 3),
     });
     res.status(201).json(serialize(doc));
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Could not save coral reef record." });
+  }
+}
+
+async function updateCoralReef(req, res) {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({ message: "Invalid coral reef id." });
+    }
+    const existing = await CoralReef.findById(id);
+    if (!existing) {
+      return res.status(404).json({ message: "Coral reef record not found." });
+    }
+
+    const body = normalizeBody(req);
+    const v = validateBody(body);
+    if (v.error) {
+      return res.status(400).json({ message: v.error });
+    }
+
+    const parsedKeep = parseKeptPhotoUrls(body.keptPhotoUrls ?? req.body?.keptPhotoUrls);
+    if (parsedKeep.error) {
+      return res.status(400).json({ message: parsedKeep.error });
+    }
+
+    const legacyPhoto =
+      typeof existing.photo === "string" && existing.photo.trim()
+        ? [existing.photo.trim()]
+        : [];
+    const currentPhotos = Array.isArray(existing.photos)
+      ? existing.photos.map((u) => String(u || "").trim()).filter(Boolean)
+      : [];
+    const effectiveCurrent = currentPhotos.length > 0 ? currentPhotos : legacyPhoto;
+
+    let basePhotos = effectiveCurrent;
+    if (parsedKeep.keep !== undefined) {
+      const keepSet = new Set(parsedKeep.keep);
+      const removed = basePhotos.filter((u) => !keepSet.has(u));
+      basePhotos = basePhotos.filter((u) => keepSet.has(u));
+      if (removed.length > 0) {
+        await removeSupabaseObjectsByUrls(removed);
+      }
+    }
+
+    const photoFiles = Array.isArray(req.files?.photos) ? req.files.photos : [];
+    if (photoFiles.length > 0) {
+      const availableSlots = Math.max(0, 3 - basePhotos.length);
+      if (availableSlots === 0) {
+        return res.status(400).json({
+          message: "You already have 3 photos. Remove one first before uploading a new photo.",
+        });
+      }
+      const toUpload = photoFiles.slice(0, availableSlots);
+      let photoUrls = [];
+      try {
+        const uploaded = await uploadImageFilesToSupabase(toUpload, "coral-reefs");
+        photoUrls = Array.isArray(uploaded) ? uploaded.filter(Boolean) : [];
+      } catch (e) {
+        console.error(e);
+        return res.status(503).json({
+          message: "Image upload failed. Check Supabase bucket and credentials.",
+        });
+      }
+      basePhotos = [...basePhotos, ...photoUrls].slice(0, 3);
+    }
+
+    existing.photos = basePhotos.slice(0, 3);
+    if (Array.isArray(existing.photos) && existing.photos.length > 0) {
+      existing.photo = "";
+    }
+
+    existing.coralName = v.values.coralName;
+    existing.coralType = v.values.coralType;
+    existing.description = v.values.description;
+    existing.coralStatus = v.values.coralStatus;
+    existing.location = v.values.location;
+    existing.areaCoordinates = v.values.areaCoordinates;
+
+    const saved = await existing.save();
+    res.json(serialize(saved));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Could not update coral reef record." });
   }
 }
 
@@ -209,7 +320,9 @@ async function deleteCoralReef(req, res) {
     if (!doc) {
       return res.status(404).json({ message: "Coral reef record not found." });
     }
-    await removeSupabaseObjectsByUrls(doc.photo ? [doc.photo] : []);
+    const oldPhotos = Array.isArray(doc.photos) ? doc.photos.filter(Boolean) : [];
+    const legacyPhoto = typeof doc.photo === "string" && doc.photo.trim() ? [doc.photo.trim()] : [];
+    await removeSupabaseObjectsByUrls([...oldPhotos, ...legacyPhoto]);
     await CoralReef.deleteOne({ _id: id });
     res.status(204).end();
   } catch (err) {
@@ -221,5 +334,6 @@ async function deleteCoralReef(req, res) {
 module.exports = {
   listCoralReefs,
   createCoralReef,
+  updateCoralReef,
   deleteCoralReef,
 };

@@ -21,6 +21,7 @@ const {
 const {
   listCoralReefs,
   createCoralReef,
+  updateCoralReef,
   deleteCoralReef,
 } = require("./controllers/coralReefsController");
 
@@ -42,14 +43,14 @@ const projectImages = multer({
   },
 }).fields([{ name: "images", maxCount: 12 }]);
 
-const coralReefPhoto = multer({
+const coralReefPhotos = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 6 * 1024 * 1024, files: 1 },
+  limits: { fileSize: 6 * 1024 * 1024, files: 3 },
   fileFilter: (_req, file, cb) => {
     const ok = /^image\/(jpeg|jpg|png|webp|gif)$/i.test(file.mimetype);
     cb(null, ok);
   },
-}).fields([{ name: "photo", maxCount: 1 }]);
+}).fields([{ name: "photos", maxCount: 3 }]);
 
 function projectMultipart(req, res, next) {
   const ct = req.get("content-type") || "";
@@ -62,7 +63,7 @@ function projectMultipart(req, res, next) {
 function coralReefMultipart(req, res, next) {
   const ct = req.get("content-type") || "";
   if (ct.includes("multipart/form-data")) {
-    return coralReefPhoto(req, res, next);
+    return coralReefPhotos(req, res, next);
   }
   next();
 }
@@ -164,6 +165,7 @@ app.delete("/api/projects/:id", requireAdmin, deleteProject);
 
 app.get("/api/coral-reefs", listCoralReefs);
 app.post("/api/coral-reefs", requireAdmin, coralReefMultipart, createCoralReef);
+app.patch("/api/coral-reefs/:id", requireAdmin, coralReefMultipart, updateCoralReef);
 app.delete("/api/coral-reefs/:id", requireAdmin, deleteCoralReef);
 
 app.get("/api/announcements/featured", getFeaturedAnnouncement);
