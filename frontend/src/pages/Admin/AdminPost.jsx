@@ -122,7 +122,7 @@ const AdminPost = () => {
         </p>
       ) : null}
 
-      <div className="mt-8">
+      <div className="mt-6 sm:mt-8">
         {announcements.length === 0 && !loadError ? (
           <p className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-8 text-center text-sm text-white/50">
             No announcements yet. Click <span className="text-white/70">Add highlight</span> to
@@ -133,48 +133,50 @@ const AdminPost = () => {
             {announcements.map((row, index) => (
               <li
                 key={row.id}
-                className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5"
+                className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-3 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-5 sm:py-4"
               >
                 <div className="min-w-0 flex gap-3">
                   {row.images?.[0]?.url ? (
                     <img
                       src={row.images[0].url}
                       alt=""
-                      className="h-14 w-20 shrink-0 rounded-lg object-cover"
+                      className="h-12 w-16 shrink-0 rounded-lg object-cover sm:h-14 sm:w-20"
                     />
                   ) : (
-                    <div className="flex h-14 w-20 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/30 text-[10px] text-white/40">
+                    <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-black/30 text-[10px] text-white/40 sm:h-14 sm:w-20">
                       No img
                     </div>
                   )}
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate font-semibold text-white">{row.title}</p>
+                      <p className="line-clamp-2 text-sm font-semibold text-white sm:truncate sm:text-base">
+                        {row.title}
+                      </p>
                       {index === 0 ? (
                         <span className="shrink-0 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-200/90">
                           On homepage
                         </span>
                       ) : null}
                     </div>
-                    <p className="mt-1 text-xs text-white/45">
+                    <p className="mt-1 text-[11px] text-white/45 sm:text-xs">
                       Updated {formatWhen(row.updatedAt || row.createdAt)} ·{" "}
                       {(row.images || []).length} image
                       {(row.images || []).length === 1 ? "" : "s"}
                     </p>
                   </div>
                 </div>
-                <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+                <div className="flex w-full shrink-0 gap-2 sm:w-auto sm:flex-wrap sm:justify-end">
                   <button
                     type="button"
                     onClick={() => openEdit(row)}
-                    className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white/90 transition hover:bg-white/10"
+                    className="flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white/90 transition hover:bg-white/10 sm:flex-none"
                   >
                     Edit
                   </button>
                   <button
                     type="button"
                     onClick={() => setDeleteTarget(row)}
-                    className="rounded-xl border border-rose-500/35 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-200/95 transition hover:bg-rose-500/20"
+                    className="flex-1 rounded-xl border border-rose-500/35 bg-rose-500/10 px-4 py-2 text-sm font-medium text-rose-200/95 transition hover:bg-rose-500/20 sm:flex-none"
                   >
                     Delete
                   </button>
@@ -186,7 +188,7 @@ const AdminPost = () => {
       </div>
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-auto bg-black/70 p-4 backdrop-blur-sm sm:items-center">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/70 p-2 backdrop-blur-sm sm:items-center sm:p-4">
           <PostModal
             onClose={closeModal}
             onSaved={handleSaved}

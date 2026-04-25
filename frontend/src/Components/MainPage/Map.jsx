@@ -10,6 +10,7 @@ import {
 import L from "leaflet";
 
 import { fetchProjects } from "../../api/projectsApi";
+import { fetchCoralReefs } from "../../api/coralReefsApi";
 import { useGeolocation } from "../../Hooks/useGeolocation";
 import { getGoogleMapsDirectionsUrl } from "../../utils/googleMaps";
 import {
@@ -18,6 +19,7 @@ import {
   projectHasMapCoordinates,
   projectsToMapSites,
 } from "../../utils/projectSites";
+import CoralReefMap from "../Admin/CoralReefMap";
 import MapUserLocation from "../Map/MapUserLocation";
 import {
   PROGRAM_STYLES,
@@ -62,6 +64,7 @@ function MapInvalidateOnFullscreen() {
 const Map = () => {
   const rootRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mapView, setMapView] = useState("PROGRAMS"); // PROGRAMS | CORAL_REEFS
   const geo = useGeolocation();
   const userLocation =
     geo.lat != null &&
@@ -76,6 +79,8 @@ const Map = () => {
       : null;
 
   const [projects, setProjects] = useState([]);
+  const [coralRecords, setCoralRecords] = useState([]);
+  const [coralLoadedOnce, setCoralLoadedOnce] = useState(false);
   const [filters, setFilters] = useState({
     q: "",
     program: "ALL",
@@ -189,6 +194,27 @@ const Map = () => {
   }, []);
 
   useEffect(() => {
+    if (mapView !== "CORAL_REEFS") return;
+    if (coralLoadedOnce) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await fetchCoralReefs();
+        if (!cancelled) setCoralRecords(Array.isArray(list) ? list : []);
+      } catch {
+        if (!cancelled) setCoralRecords([]);
+      } finally {
+        if (!cancelled) setCoralLoadedOnce(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mapView, coralLoadedOnce]);
+
+  useEffect(() => {
     fixLeafletDefaultIcons();
   }, []);
 
@@ -245,9 +271,49 @@ const Map = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <div
+            className="inline-flex h-10 items-center rounded-full border border-white/10 bg-white/5 p-1 text-xs font-semibold text-white/85 sm:h-11 sm:text-sm"
+            role="tablist"
+            aria-label="Map view"
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setMapView("PROGRAMS");
+                setFiltersOpen(false);
+              }}
+              className={`h-8 rounded-full px-3 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 sm:h-9 sm:px-4 ${
+                mapView === "PROGRAMS"
+                  ? "bg-white/15 text-white"
+                  : "text-white/70 hover:bg-white/10"
+              }`}
+              role="tab"
+              aria-selected={mapView === "PROGRAMS"}
+            >
+              Programs
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMapView("CORAL_REEFS");
+                setFiltersOpen(false);
+              }}
+              className={`h-8 rounded-full px-3 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 sm:h-9 sm:px-4 ${
+                mapView === "CORAL_REEFS"
+                  ? "bg-white/15 text-white"
+                  : "text-white/70 hover:bg-white/10"
+              }`}
+              role="tab"
+              aria-selected={mapView === "CORAL_REEFS"}
+            >
+              Coral reefs
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={() => setFiltersOpen((v) => !v)}
+            disabled={mapView !== "PROGRAMS"}
             className="inline-flex h-10 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 sm:h-11 sm:px-4 sm:text-sm"
             aria-expanded={filtersOpen}
             aria-controls="map-filters-panel"
@@ -310,7 +376,9 @@ const Map = () => {
           <div className="flex flex-col items-end gap-1">
             <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 sm:inline-flex">
               <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,.65)]" />
-              {programSites.length} site{programSites.length === 1 ? "" : "s"}
+              {mapView === "PROGRAMS"
+                ? `${programSites.length} site${programSites.length === 1 ? "" : "s"}`
+                : `${coralRecords.length} reef${coralRecords.length === 1 ? "" : "s"}`}
             </div>
             <div className="max-w-[min(100vw-2rem,240px)] text-right text-[10px] leading-tight text-white/50">
               {geo.loading ? (
@@ -327,7 +395,7 @@ const Map = () => {
         </div>
       </div>
 
-      {filtersOpen ? (
+      {filtersOpen && mapView === "PROGRAMS" ? (
         <div className="relative px-4 pb-3 sm:px-6">
           <div
             id="map-filters-panel"
@@ -430,201 +498,210 @@ const Map = () => {
       ) : null}
 
       <div className="relative h-[calc(100vh-56px)] min-h-[520px] w-full">
-        <MapContainer
-          center={center}
-          zoom={11}
-          minZoom={2}
-          maxZoom={18}
-          scrollWheelZoom={false}
-          attributionControl={false}
-          className="h-full w-full"
-        >
-          <MapInvalidateOnFullscreen />
-          <TileLayer
-            // Dark theme tiles for a "technology look"
-            // Provider: CartoDB Dark Matter
-            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-            subdomains="abcd"
-          />
-
-          <MapUserLocation position={userLocation} bounds={bounds} />
-
-          <Marker
-            position={PSTO_OFFICE_SITE.coordinates}
-            icon={createProgramDivIcon({
-              label: "PSTO",
-              color: "#F59E0B",
-            })}
+        {mapView === "PROGRAMS" ? (
+          <MapContainer
+            center={center}
+            zoom={11}
+            minZoom={2}
+            maxZoom={18}
+            scrollWheelZoom={false}
+            attributionControl={false}
+            className="h-full w-full"
           >
-            <Tooltip direction="top" offset={[0, -6]} opacity={1}>
-              <span style={{ fontWeight: 800 }}>PSTO</span>{" "}
-              <span style={{ opacity: 0.85 }}>• {PSTO_OFFICE_SITE.name}</span>
-            </Tooltip>
-            <Popup>
-              <div style={{ minWidth: 220, color: "#0f172a" }}>
-                <div style={{ fontWeight: 800 }}>{PSTO_OFFICE_SITE.name}</div>
-                <div style={{ marginTop: 6, opacity: 0.9, fontSize: 13 }}>
-                  Location:{" "}
-                  <b>
-                    {PSTO_OFFICE_SITE.coordinates[0].toFixed(6)},{" "}
-                    {PSTO_OFFICE_SITE.coordinates[1].toFixed(6)}
-                  </b>
-                </div>
-                <a
-                  href={getGoogleMapsDirectionsUrl(
-                    {
-                      lat: PSTO_OFFICE_SITE.coordinates[0],
-                      lng: PSTO_OFFICE_SITE.coordinates[1],
-                    },
-                    userLocation
-                  )}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: "inline-block",
-                    marginTop: 12,
-                    padding: "9px 14px",
-                    borderRadius: 8,
-                    background: "#0054A6",
-                    color: "#fff",
-                    fontWeight: 700,
-                    fontSize: 13,
-                    textDecoration: "none",
-                    textAlign: "center",
-                    width: "100%",
-                    boxSizing: "border-box",
-                  }}
-                >
-                  Go
-                </a>
-                <p
-                  style={{
-                    marginTop: 8,
-                    fontSize: 11,
-                    lineHeight: 1.35,
-                    opacity: 0.72,
-                    color: "#334155",
-                  }}
-                >
-                  {userLocation
-                    ? "Google Maps: from your current location to this office."
-                    : "Google Maps opens to this office. Allow location on this page to route from where you are."}
-                </p>
-              </div>
-            </Popup>
-          </Marker>
+            <MapInvalidateOnFullscreen />
+            <TileLayer
+              // Dark theme tiles for a "technology look"
+              // Provider: CartoDB Dark Matter
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              subdomains="abcd"
+            />
 
-          {programSites.map((site) => {
-            const style = PROGRAM_STYLES[site.program] ?? PROGRAM_STYLES.SSCP;
-            return (
-              <Marker
-                key={site.id}
-                position={site.coordinates}
-                icon={createProgramDivIcon({
-                  label: site.program,
-                  color: style.color,
-                })}
-              >
-                <Tooltip direction="top" offset={[0, -6]} opacity={1}>
-                  <span style={{ fontWeight: 700 }}>{site.program}</span>{" "}
-                  <span style={{ opacity: 0.85 }}>• {site.name}</span>
-                </Tooltip>
-                <Popup>
-                  <div style={{ minWidth: 220, color: "#0f172a" }}>
-                    <div style={{ fontWeight: 800 }}>{site.name}</div>
-                    <div style={{ marginTop: 6, opacity: 0.9, fontSize: 13 }}>
-                      Program: <b>{site.program}</b>
-                      <br />
-                      Beneficiary: <b>{site.municipality}</b>
-                      <br />
-                      Status: <b>{site.status ?? "—"}</b>
-                    </div>
-                    {site.description ? (
-                      <div style={{ marginTop: 8, fontSize: 12, opacity: 0.8 }}>
-                        {site.description}
-                      </div>
-                    ) : null}
-                    <a
-                      href={getGoogleMapsDirectionsUrl(
-                        {
-                          lat: site.coordinates[0],
-                          lng: site.coordinates[1],
-                        },
-                        userLocation
-                      )}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: "inline-block",
-                        marginTop: 12,
-                        padding: "9px 14px",
-                        borderRadius: 8,
-                        background: "#0054A6",
-                        color: "#fff",
-                        fontWeight: 700,
-                        fontSize: 13,
-                        textDecoration: "none",
-                        textAlign: "center",
-                        width: "100%",
-                        boxSizing: "border-box",
-                      }}
-                    >
-                      Go
-                    </a>
-                    <p
-                      style={{
-                        marginTop: 8,
-                        fontSize: 11,
-                        lineHeight: 1.35,
-                        opacity: 0.72,
-                        color: "#334155",
-                      }}
-                    >
-                      {userLocation
-                        ? "Google Maps: from your current location to this pin."
-                        : "Google Maps opens to this site. Allow location on this page to route from where you are."}
-                    </p>
-                  </div>
-                </Popup>
-              </Marker>
-            );
-          })}
-        </MapContainer>
+            <MapUserLocation position={userLocation} bounds={bounds} />
 
-        <div className="pointer-events-none absolute left-4 top-4 z-[500] hidden sm:block">
-          <div className="pointer-events-auto rounded-2xl border border-white/10 bg-black/55 p-3 text-xs text-white/85 backdrop-blur">
-            <div className="text-[11px] font-semibold tracking-wide text-white/80">
-              Programs Legend
-            </div>
-            <div className="mt-2 grid gap-2">
-              {PROGRAM_ORDER.map((key) => {
-                const v = PROGRAM_STYLES[key];
-                if (!v) return null;
-                const n = mapCountsByProgram[key] ?? 0;
-                return (
-                  <div key={key} className="flex items-center gap-2">
-                    <span className="relative inline-flex h-3 w-3 items-center justify-center">
-                      <span
-                        aria-hidden="true"
-                        className="absolute inline-flex h-3 w-3 rounded-full opacity-40 motion-safe:animate-ping"
-                        style={{ backgroundColor: v.color }}
-                      />
-                      <span
-                        className={`relative h-2.5 w-2.5 rounded-full ${v.glow} motion-safe:animate-pulse`}
-                        style={{ backgroundColor: v.color }}
-                      />
-                    </span>
-                    <span className="font-semibold text-white/90">{v.label}</span>
-                    <span className="text-white/50">•</span>
-                    <span className="tabular-nums text-white/80">
-                      {n} site{n === 1 ? "" : "s"} on map
-                    </span>
-                  </div>
-                );
+            <Marker
+              position={PSTO_OFFICE_SITE.coordinates}
+              icon={createProgramDivIcon({
+                label: "PSTO",
+                color: "#F59E0B",
               })}
+            >
+              <Tooltip direction="top" offset={[0, -6]} opacity={1}>
+                <span style={{ fontWeight: 800 }}>PSTO</span>{" "}
+                <span style={{ opacity: 0.85 }}>• {PSTO_OFFICE_SITE.name}</span>
+              </Tooltip>
+              <Popup>
+                <div style={{ minWidth: 220, color: "#0f172a" }}>
+                  <div style={{ fontWeight: 800 }}>{PSTO_OFFICE_SITE.name}</div>
+                  <div style={{ marginTop: 6, opacity: 0.9, fontSize: 13 }}>
+                    Location:{" "}
+                    <b>
+                      {PSTO_OFFICE_SITE.coordinates[0].toFixed(6)},{" "}
+                      {PSTO_OFFICE_SITE.coordinates[1].toFixed(6)}
+                    </b>
+                  </div>
+                  <a
+                    href={getGoogleMapsDirectionsUrl(
+                      {
+                        lat: PSTO_OFFICE_SITE.coordinates[0],
+                        lng: PSTO_OFFICE_SITE.coordinates[1],
+                      },
+                      userLocation
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "inline-block",
+                      marginTop: 12,
+                      padding: "9px 14px",
+                      borderRadius: 8,
+                      background: "#0054A6",
+                      color: "#fff",
+                      fontWeight: 700,
+                      fontSize: 13,
+                      textDecoration: "none",
+                      textAlign: "center",
+                      width: "100%",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    Go
+                  </a>
+                  <p
+                    style={{
+                      marginTop: 8,
+                      fontSize: 11,
+                      lineHeight: 1.35,
+                      opacity: 0.72,
+                      color: "#334155",
+                    }}
+                  >
+                    {userLocation
+                      ? "Google Maps: from your current location to this office."
+                      : "Google Maps opens to this office. Allow location on this page to route from where you are."}
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+
+            {programSites.map((site) => {
+              const style = PROGRAM_STYLES[site.program] ?? PROGRAM_STYLES.SSCP;
+              return (
+                <Marker
+                  key={site.id}
+                  position={site.coordinates}
+                  icon={createProgramDivIcon({
+                    label: site.program,
+                    color: style.color,
+                  })}
+                >
+                  <Tooltip direction="top" offset={[0, -6]} opacity={1}>
+                    <span style={{ fontWeight: 700 }}>{site.program}</span>{" "}
+                    <span style={{ opacity: 0.85 }}>• {site.name}</span>
+                  </Tooltip>
+                  <Popup>
+                    <div style={{ minWidth: 220, color: "#0f172a" }}>
+                      <div style={{ fontWeight: 800 }}>{site.name}</div>
+                      <div style={{ marginTop: 6, opacity: 0.9, fontSize: 13 }}>
+                        Program: <b>{site.program}</b>
+                        <br />
+                        Beneficiary: <b>{site.municipality}</b>
+                        <br />
+                        Status: <b>{site.status ?? "—"}</b>
+                      </div>
+                      {site.description ? (
+                        <div style={{ marginTop: 8, fontSize: 12, opacity: 0.8 }}>
+                          {site.description}
+                        </div>
+                      ) : null}
+                      <a
+                        href={getGoogleMapsDirectionsUrl(
+                          {
+                            lat: site.coordinates[0],
+                            lng: site.coordinates[1],
+                          },
+                          userLocation
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: "inline-block",
+                          marginTop: 12,
+                          padding: "9px 14px",
+                          borderRadius: 8,
+                          background: "#0054A6",
+                          color: "#fff",
+                          fontWeight: 700,
+                          fontSize: 13,
+                          textDecoration: "none",
+                          textAlign: "center",
+                          width: "100%",
+                          boxSizing: "border-box",
+                        }}
+                      >
+                        Go
+                      </a>
+                      <p
+                        style={{
+                          marginTop: 8,
+                          fontSize: 11,
+                          lineHeight: 1.35,
+                          opacity: 0.72,
+                          color: "#334155",
+                        }}
+                      >
+                        {userLocation
+                          ? "Google Maps: from your current location to this pin."
+                          : "Google Maps opens to this site. Allow location on this page to route from where you are."}
+                      </p>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
+          </MapContainer>
+        ) : (
+          <CoralReefMap
+            className="h-full min-h-[520px] w-full rounded-none border-x-0 border-b-0 border-t-0"
+            records={coralRecords}
+          />
+        )}
+
+        {mapView === "PROGRAMS" ? (
+          <div className="pointer-events-none absolute left-4 top-4 z-[500] hidden sm:block">
+            <div className="pointer-events-auto rounded-2xl border border-white/10 bg-black/55 p-3 text-xs text-white/85 backdrop-blur">
+              <div className="text-[11px] font-semibold tracking-wide text-white/80">
+                Programs Legend
+              </div>
+              <div className="mt-2 grid gap-2">
+                {PROGRAM_ORDER.map((key) => {
+                  const v = PROGRAM_STYLES[key];
+                  if (!v) return null;
+                  const n = mapCountsByProgram[key] ?? 0;
+                  return (
+                    <div key={key} className="flex items-center gap-2">
+                      <span className="relative inline-flex h-3 w-3 items-center justify-center">
+                        <span
+                          aria-hidden="true"
+                          className="absolute inline-flex h-3 w-3 rounded-full opacity-40 motion-safe:animate-ping"
+                          style={{ backgroundColor: v.color }}
+                        />
+                        <span
+                          className={`relative h-2.5 w-2.5 rounded-full ${v.glow} motion-safe:animate-pulse`}
+                          style={{ backgroundColor: v.color }}
+                        />
+                      </span>
+                      <span className="font-semibold text-white/90">{v.label}</span>
+                      <span className="text-white/50">•</span>
+                      <span className="tabular-nums text-white/80">
+                        {n} site{n === 1 ? "" : "s"} on map
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        ) : null}
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 px-4 py-3 text-[11px] text-white/55 sm:px-6">
           <div className="truncate">

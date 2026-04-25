@@ -1,15 +1,31 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { ADMIN_TOKEN_KEY } from "../../api/client";
 import { loginAdmin } from "../../api/authApi";
 import PasswordField from "./PasswordField";
 
+const ADMIN_REMEMBER_KEY = "dost_admin_login_remember_v1";
+
 const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(ADMIN_REMEMBER_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved?.email) setEmail(String(saved.email));
+      if (saved?.password) setPassword(String(saved.password));
+      if (saved?.email || saved?.password) setRememberMe(true);
+    } catch {
+      localStorage.removeItem(ADMIN_REMEMBER_KEY);
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,6 +36,17 @@ const Login = () => {
         password,
       });
       localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
+      if (rememberMe) {
+        localStorage.setItem(
+          ADMIN_REMEMBER_KEY,
+          JSON.stringify({
+            email: String(email).trim(),
+            password,
+          })
+        );
+      } else {
+        localStorage.removeItem(ADMIN_REMEMBER_KEY);
+      }
       toast.success("Signed in successfully.");
       navigate("/dashboard");
     } catch (err) {
@@ -79,6 +106,15 @@ const Login = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+            <label className="flex select-none items-center gap-2 text-sm text-white/75">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="h-4 w-4 rounded border-white/20 bg-black/50 text-cyan-400 focus:ring-cyan-400/60"
+              />
+              Remember me
+            </label>
 
             <button
               type="submit"

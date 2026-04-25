@@ -174,10 +174,10 @@ const CoralReefMapping = () => {
       </div>
 
       {modalOpen ? (
-        <div className="fixed inset-0 z-[100] flex h-full min-h-0 flex-col bg-slate-950 md:flex-row">
-          <div className="relative flex min-h-[36vh] w-full flex-[1.2] flex-col md:min-h-0 md:overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex h-full min-h-0 flex-col overflow-y-auto bg-slate-950 md:flex-row md:overflow-hidden">
+          <div className="relative flex min-h-[42vh] w-full flex-[1.2] flex-col md:min-h-0 md:overflow-hidden">
             <CoralReefMap
-              className="h-full min-h-[36vh] rounded-none border-x-0 border-t-0 md:min-h-0"
+              className="h-full min-h-[42vh] rounded-none border-x-0 border-t-0 md:min-h-0"
               splitLayout
               records={records}
               pickMode
@@ -191,7 +191,7 @@ const CoralReefMapping = () => {
               onMoveDraftPoint={handleMoveDraftPoint}
             />
           </div>
-          <div className="flex min-h-0 w-full min-w-0 flex-[0.95] flex-col border-t border-white/10 md:max-w-xl md:border-l md:border-t-0 lg:max-w-lg">
+          <div className="flex min-h-0 w-full min-w-0 flex-[0.95] flex-col overflow-y-auto border-t border-white/10 md:max-w-xl md:border-l md:border-t-0 lg:max-w-lg">
             <AddCoralReefModal
               onClose={closeModal}
               onSave={handleSave}
@@ -216,12 +216,12 @@ const CoralReefMapping = () => {
         </div>
       ) : (
         <>
-          <div className="mt-8">
+          <div className="mt-6 sm:mt-8">
             <CoralReefMap records={records} />
           </div>
 
           {records.length > 0 ? (
-            <div className="mt-8 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03]">
+            <div className="mt-6 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.03] sm:mt-8">
               <table className="w-full min-w-[860px] border-collapse text-left text-sm">
                 <thead>
                   <tr className="border-b border-white/10 bg-black/30 text-xs font-semibold uppercase tracking-wide text-white/55">
@@ -302,7 +302,7 @@ const CoralReefMapping = () => {
                           <button
                             type="button"
                             onClick={() => openEditModal(record)}
-                            className="mr-2 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/85 transition hover:bg-white/10"
+                            className="mr-2 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/85 transition hover:bg-white/10 sm:px-3.5 sm:py-2"
                           >
                             Edit
                           </button>
@@ -310,7 +310,7 @@ const CoralReefMapping = () => {
                             type="button"
                             disabled={deletingId === record.id}
                             onClick={() => handleDelete(record)}
-                            className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-100/95 transition hover:bg-rose-500/20 disabled:opacity-50"
+                            className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-100/95 transition hover:bg-rose-500/20 disabled:opacity-50 sm:px-3.5 sm:py-2"
                           >
                             {deletingId === record.id ? "..." : "Delete"}
                           </button>
