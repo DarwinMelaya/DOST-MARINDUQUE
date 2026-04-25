@@ -8,7 +8,17 @@ const connectDB = async () => {
   }
 
   try {
-    await mongoose.connect(uri);
+    // Avoid reconnecting if already connected (helps on hot reload / Render restarts).
+    if (mongoose.connection?.readyState === 1) {
+      return;
+    }
+
+    await mongoose.connect(uri, {
+      // Render is a long-lived process: keep a small connection pool.
+      maxPoolSize: Number(process.env.MONGODB_MAX_POOL_SIZE) || 10,
+      serverSelectionTimeoutMS:
+        Number(process.env.MONGODB_SERVER_SELECTION_TIMEOUT_MS) || 8000,
+    });
     console.log("MongoDB connected");
   } catch (err) {
     console.error("MongoDB connection failed:", err);

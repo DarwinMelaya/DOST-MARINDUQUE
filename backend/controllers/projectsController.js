@@ -128,9 +128,44 @@ function validateCoreFields(body) {
   };
 }
 
+function parsePositiveInt(v, { min = 0, max = 1000, fallback = 0 } = {}) {
+  const n = Number.parseInt(String(v ?? ""), 10);
+  if (Number.isNaN(n)) return fallback;
+  if (n < min) return min;
+  if (n > max) return max;
+  return n;
+}
+
+function truthyQueryFlag(v) {
+  const s = String(v ?? "").trim().toLowerCase();
+  return s === "1" || s === "true" || s === "yes" || s === "y";
+}
+
 async function listProjects(req, res) {
   try {
-    const docs = await Project.find().sort({ createdAt: -1 }).lean();
+    const view = String(req.query.view ?? "").trim().toLowerCase();
+    const pinnedOnly = truthyQueryFlag(req.query.pinnedOnly);
+    let limit = parsePositiveInt(req.query.limit, { min: 0, max: 2000, fallback: 0 });
+
+    // Safe default for the map page: don't accidentally ship thousands of rows.
+    if (view === "map" && limit === 0) limit = 600;
+
+    const filter = {};
+    if (pinnedOnly) {
+      filter["location.latitude"] = { $ne: null };
+      filter["location.longitude"] = { $ne: null };
+    }
+
+    let q = Project.find(filter).sort({ createdAt: -1 });
+    if (view === "map") {
+      // Minimal fields needed by the public map + filters.
+      q = q.select(
+        "programType title beneficiary projectStatus briefDescription location createdAt updatedAt"
+      );
+    }
+    if (limit > 0) q = q.limit(limit);
+
+    const docs = await q.lean();
     res.json(docs.map((d) => serialize({ ...d, _id: d._id })));
   } catch (err) {
     console.error(err);

@@ -1,4 +1,5 @@
 require("dotenv").config();
+const compression = require("compression");
 const cors = require("cors");
 const express = require("express");
 const multer = require("multer");
@@ -73,6 +74,10 @@ const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+
+app.disable("x-powered-by");
+// Render/Reverse proxies: allow correct IP/secure cookies when needed.
+app.set("trust proxy", 1);
 
 function parseAllowedOrigins(v) {
   if (!v) return [];
@@ -149,7 +154,15 @@ app.use((err, _req, res, next) => {
   }
   next(err);
 });
-app.use(express.json());
+// Compress JSON responses (big impact when collections grow).
+app.use(
+  compression({
+    level: 6,
+    threshold: 1024, // don't bother for tiny payloads
+  })
+);
+
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true });

@@ -177,7 +177,7 @@ const Map = () => {
     let cancelled = false;
     (async () => {
       try {
-        const list = await fetchProjects();
+        const list = await fetchProjects({ view: "map", pinnedOnly: true });
         if (!cancelled) setProjects(Array.isArray(list) ? list : []);
       } catch {
         if (!cancelled) setProjects([]);

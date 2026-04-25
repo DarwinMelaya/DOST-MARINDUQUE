@@ -14,8 +14,13 @@ function multipartConfig() {
 /**
  * Pull / list projects (GET) — axios only, hindi `fetch()`.
  */
-export async function fetchProjects() {
-  const { data } = await api.get("/projects");
+export async function fetchProjects(options = {}) {
+  const params = {};
+  if (options?.view) params.view = options.view;
+  if (options?.pinnedOnly != null) params.pinnedOnly = options.pinnedOnly ? "1" : "0";
+  if (options?.limit != null) params.limit = String(options.limit);
+
+  const { data } = await api.get("/projects", { params });
   return Array.isArray(data) ? data : [];
 }
 
