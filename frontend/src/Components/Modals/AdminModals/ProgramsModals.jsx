@@ -13,6 +13,16 @@ const inputClass =
 
 const labelClass = "mb-1.5 block text-sm font-medium text-white/80";
 
+const formatAmountInput = (value) => {
+  const cleaned = String(value ?? "").replace(/[^0-9.]/g, "");
+  if (!cleaned) return "";
+  const [intRaw, ...decimalParts] = cleaned.split(".");
+  const intPart = intRaw.replace(/^0+(?=\d)/, "") || "0";
+  const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  if (decimalParts.length === 0) return withCommas;
+  return `${withCommas}.${decimalParts.join("")}`;
+};
+
 /**
  * Form panel for adding a project. Location lat/lng are controlled by the parent
  * so the AdminPrograms map can update them when the user clicks the map.
@@ -24,6 +34,8 @@ const ProgramsModals = ({
   longitude,
   onLatitudeChange,
   onLongitudeChange,
+  onUseCurrentLocation,
+  locating = false,
   editingProject = null,
 }) => {
   const [programType, setProgramType] = useState("");
@@ -70,7 +82,7 @@ const ProgramsModals = ({
     }
     setProgramType(editingProject.programType || "");
     setTitle(editingProject.title || "");
-    setAmountOfAssistance(editingProject.amountOfAssistance || "");
+    setAmountOfAssistance(formatAmountInput(editingProject.amountOfAssistance || ""));
     setBeneficiary(editingProject.beneficiary || "");
     setContactPerson(editingProject.contactPerson || "");
     setBriefDescription(editingProject.briefDescription || "");
@@ -89,7 +101,7 @@ const ProgramsModals = ({
     if (!editingProject) return;
     setProgramType(editingProject.programType || "");
     setTitle(editingProject.title || "");
-    setAmountOfAssistance(editingProject.amountOfAssistance || "");
+    setAmountOfAssistance(formatAmountInput(editingProject.amountOfAssistance || ""));
     setBeneficiary(editingProject.beneficiary || "");
     setContactPerson(editingProject.contactPerson || "");
     setBriefDescription(editingProject.briefDescription || "");
@@ -258,9 +270,11 @@ const ProgramsModals = ({
                   type="text"
                   inputMode="decimal"
                   value={amountOfAssistance}
-                  onChange={(e) => setAmountOfAssistance(e.target.value)}
+                  onChange={(e) =>
+                    setAmountOfAssistance(formatAmountInput(e.target.value))
+                  }
                   className={inputClass}
-                  placeholder="e.g. PHP 500,000"
+                  placeholder="e.g. 500,000"
                 />
               </div>
 
@@ -431,6 +445,14 @@ const ProgramsModals = ({
                   Click the map on the left (or above on small screens) to drop a
                   pin. You can fine-tune values here.
                 </p>
+                <button
+                  type="button"
+                  onClick={onUseCurrentLocation}
+                  disabled={locating}
+                  className="mb-3 rounded-lg border border-sky-400/35 bg-sky-500/10 px-3 py-2 text-xs font-semibold text-sky-100 transition hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {locating ? "Getting current location..." : "Use current location"}
+                </button>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label

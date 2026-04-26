@@ -24,6 +24,7 @@ const AdminPrograms = () => {
   const [editingProject, setEditingProject] = useState(null);
   const [pickLat, setPickLat] = useState("");
   const [pickLng, setPickLng] = useState("");
+  const [locating, setLocating] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
@@ -132,6 +133,36 @@ const AdminPrograms = () => {
     setPickLat(lat.toFixed(6));
     setPickLng(lng.toFixed(6));
     toast.success("Location set from map.");
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setPickLat(position.coords.latitude.toFixed(6));
+        setPickLng(position.coords.longitude.toFixed(6));
+        setLocating(false);
+        toast.success("Current location set.");
+      },
+      (error) => {
+        setLocating(false);
+        const message =
+          error.code === error.PERMISSION_DENIED
+            ? "Location permission denied. Allow location access to use this."
+            : "Could not get current location.";
+        toast.error(message);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      },
+    );
   };
 
   return (
@@ -350,6 +381,8 @@ const AdminPrograms = () => {
               longitude={pickLng}
               onLatitudeChange={setPickLat}
               onLongitudeChange={setPickLng}
+              onUseCurrentLocation={handleUseCurrentLocation}
+              locating={locating}
               editingProject={editingProject}
             />
           </div>
