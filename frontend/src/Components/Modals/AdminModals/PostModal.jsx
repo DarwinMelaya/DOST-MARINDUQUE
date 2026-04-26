@@ -15,6 +15,7 @@ const emptyForm = () => ({
   hashtags: "",
   ctaLabel: "",
   ctaUrl: "",
+  facebookPostUrl: "",
   newImageAlts: "",
 });
 
@@ -57,6 +58,7 @@ const PostModal = ({ onClose, onSaved, editingAnnouncement }) => {
         hashtags: Array.isArray(a.hashtags) ? a.hashtags.join("\n") : "",
         ctaLabel: a.ctaLabel || "",
         ctaUrl: a.ctaUrl || "",
+        facebookPostUrl: a.facebookPostUrl || "",
         newImageAlts: "",
       });
       setKeptImages(
@@ -99,20 +101,14 @@ const PostModal = ({ onClose, onSaved, editingAnnouncement }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.title.trim()) {
-      toast.error("Title is required.");
-      return;
-    }
-    if (!form.bodyText.trim()) {
-      toast.error("Add the announcement body (use a blank line between paragraphs).");
-      return;
-    }
-    if (!isEdit && newFiles.length === 0) {
-      toast.error("Add at least one image for the gallery.");
-      return;
-    }
-    if (isEdit && keptImages.length === 0 && newFiles.length === 0) {
-      toast.error("Keep at least one image or add new images.");
+    const hasAnyContent =
+      Boolean(form.title.trim()) ||
+      Boolean(form.bodyText.trim()) ||
+      Boolean(form.facebookPostUrl.trim()) ||
+      keptImages.length > 0 ||
+      newFiles.length > 0;
+    if (!hasAnyContent) {
+      toast.error("Add at least one: title, body, image, or Facebook embed/link.");
       return;
     }
 
@@ -132,6 +128,7 @@ const PostModal = ({ onClose, onSaved, editingAnnouncement }) => {
     fd.append("hashtags", form.hashtags);
     fd.append("ctaLabel", form.ctaLabel);
     fd.append("ctaUrl", form.ctaUrl);
+    fd.append("facebookPostUrl", form.facebookPostUrl);
     fd.append("imageAlts", newAltsJson);
     if (isEdit) {
       fd.append(
@@ -208,12 +205,11 @@ const PostModal = ({ onClose, onSaved, editingAnnouncement }) => {
           </label>
 
           <label className={labelClass}>
-            Title <span className="text-rose-300/90">*</span>
+            Title
             <input
               type="text"
               value={form.title}
               onChange={setField("title")}
-              required
               className={inputClass}
               placeholder="Headline shown under the badge"
             />
@@ -254,6 +250,17 @@ const PostModal = ({ onClose, onSaved, editingAnnouncement }) => {
           </div>
 
           <label className={labelClass}>
+            Facebook post embed (optional)
+            <textarea
+              value={form.facebookPostUrl}
+              onChange={setField("facebookPostUrl")}
+              rows={3}
+              className={inputClass}
+              placeholder={'Paste Facebook URL or iframe embed code:\n<iframe src="https://www.facebook.com/plugins/post.php?href=..."></iframe>'}
+            />
+          </label>
+
+          <label className={labelClass}>
             Carousel caption (over the photos)
             <input
               type="text"
@@ -265,7 +272,7 @@ const PostModal = ({ onClose, onSaved, editingAnnouncement }) => {
           </label>
 
           <label className={labelClass}>
-            Body <span className="text-rose-300/90">*</span>
+            Body
             <textarea
               value={form.bodyText}
               onChange={setField("bodyText")}
@@ -354,9 +361,6 @@ const PostModal = ({ onClose, onSaved, editingAnnouncement }) => {
           <div>
             <p className={labelClass}>
               {isEdit ? "Add more images (optional)" : "Images"}{" "}
-              {!isEdit ? (
-                <span className="text-rose-300/90">*</span>
-              ) : null}{" "}
               <span className="font-normal text-white/50">
                 (JPEG, PNG, WebP, GIF)
               </span>

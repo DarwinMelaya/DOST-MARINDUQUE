@@ -30,10 +30,59 @@ function serialize(doc) {
     hashtags: Array.isArray(o.hashtags) ? o.hashtags : [],
     ctaLabel: o.ctaLabel ?? "",
     ctaUrl: o.ctaUrl ?? "",
+    facebookPostUrl: o.facebookPostUrl ?? "",
     images: Array.isArray(o.images) ? o.images : [],
     createdAt: o.createdAt,
     updatedAt: o.updatedAt,
   };
+}
+
+function normalizeFacebookPostUrl(raw) {
+  const input = String(raw ?? "").trim();
+  if (!input) return "";
+  let parsed;
+  try {
+    parsed = new URL(input);
+  } catch {
+    return null;
+  }
+
+  const host = parsed.hostname.toLowerCase();
+  const allowedHosts = new Set([
+    "facebook.com",
+    "www.facebook.com",
+    "web.facebook.com",
+    "m.facebook.com",
+    "fb.watch",
+    "www.fb.watch",
+  ]);
+  if (!allowedHosts.has(host)) return null;
+  return parsed.toString();
+}
+
+function extractFacebookPostUrl(raw) {
+  const input = String(raw ?? "").trim();
+  if (!input) return "";
+  if (input.includes("<iframe")) {
+    const srcMatch = input.match(/src=["']([^"']+)["']/i);
+    if (!srcMatch?.[1]) return null;
+    let srcUrl;
+    try {
+      srcUrl = new URL(srcMatch[1]);
+    } catch {
+      return null;
+    }
+    const srcHost = srcUrl.hostname.toLowerCase();
+    const isFacebookPluginHost =
+      srcHost === "facebook.com" || srcHost === "www.facebook.com";
+    const pluginPath = srcUrl.pathname.toLowerCase();
+    const isSupportedPluginPath =
+      pluginPath === "/plugins/post.php" || pluginPath === "/plugins/video.php";
+    if (!isFacebookPluginHost || !isSupportedPluginPath) return null;
+    const href = srcUrl.searchParams.get("href");
+    return normalizeFacebookPostUrl(href);
+  }
+  return normalizeFacebookPostUrl(input);
 }
 
 async function uploadImagesToSupabase(files) {
@@ -134,23 +183,7 @@ async function createAnnouncement(req, res) {
   try {
     const fileList = req.files?.images;
     const files = Array.isArray(fileList) ? fileList : [];
-    if (files.length === 0) {
-      return res.status(400).json({
-        message: "At least one image is required for the announcement gallery.",
-      });
-    }
-
-    let urls;
-    try {
-      urls = await uploadImagesToSupabase(files);
-    } catch (e) {
-      console.error(e);
-      const msg =
-        e.message?.includes("Missing SUPABASE") || e.message?.includes("Supabase")
-          ? e.message
-          : "Image upload failed. Check Supabase bucket and credentials.";
-      return res.status(503).json({ message: msg });
-    }
+    let urls = [];
 
     const {
       highlightLabel,
@@ -163,18 +196,42 @@ async function createAnnouncement(req, res) {
       hashtags: hashtagsRaw,
       ctaLabel,
       ctaUrl,
+      facebookPostUrl: facebookPostRaw,
       imageAlts: imageAltsRaw,
     } = req.body;
 
-    if (!title?.trim()) {
-      return res.status(400).json({ message: "Title is required." });
+    const bodyParagraphs = parseBodyParagraphs(bodyText);
+
+    const normalizedFacebookPostUrl = extractFacebookPostUrl(facebookPostRaw);
+    if (normalizedFacebookPostUrl === null) {
+      return res.status(400).json({
+        message:
+          "Facebook input must be a valid facebook.com/fb.watch URL or Facebook iframe embed code.",
+      });
     }
 
-    const bodyParagraphs = parseBodyParagraphs(bodyText);
-    if (bodyParagraphs.length === 0) {
+    const hasAnyContent =
+      Boolean(String(title ?? "").trim()) ||
+      bodyParagraphs.length > 0 ||
+      files.length > 0 ||
+      Boolean(normalizedFacebookPostUrl);
+    if (!hasAnyContent) {
       return res.status(400).json({
-        message: "Add announcement text (body). Use a blank line between paragraphs.",
+        message: "Add at least one: title, body, image, or Facebook embed/link.",
       });
+    }
+
+    if (files.length > 0) {
+      try {
+        urls = await uploadImagesToSupabase(files);
+      } catch (e) {
+        console.error(e);
+        const msg =
+          e.message?.includes("Missing SUPABASE") || e.message?.includes("Supabase")
+            ? e.message
+            : "Image upload failed. Check Supabase bucket and credentials.";
+        return res.status(503).json({ message: msg });
+      }
     }
 
     const hashtags = parseHashtags(hashtagsRaw);
@@ -186,7 +243,7 @@ async function createAnnouncement(req, res) {
 
     const doc = await Announcement.create({
       highlightLabel: String(highlightLabel ?? "").trim() || "Today's highlight",
-      title: title.trim(),
+      title: String(title ?? "").trim(),
       subtitle: String(subtitle ?? "").trim(),
       displayDate: String(displayDate ?? "").trim(),
       badge: String(badge ?? "").trim(),
@@ -195,6 +252,7 @@ async function createAnnouncement(req, res) {
       hashtags,
       ctaLabel: String(ctaLabel ?? "").trim(),
       ctaUrl: String(ctaUrl ?? "").trim(),
+      facebookPostUrl: normalizedFacebookPostUrl,
       images,
     });
 
@@ -295,11 +353,6 @@ async function updateAnnouncement(req, res) {
     }));
 
     const finalImages = [...keptNormalized, ...newImages];
-    if (finalImages.length === 0) {
-      return res.status(400).json({
-        message: "Keep at least one image or upload new images.",
-      });
-    }
 
     const {
       highlightLabel,
@@ -312,16 +365,25 @@ async function updateAnnouncement(req, res) {
       hashtags: hashtagsRaw,
       ctaLabel,
       ctaUrl,
+      facebookPostUrl: facebookPostRaw,
     } = req.body;
-
-    if (!title?.trim()) {
-      return res.status(400).json({ message: "Title is required." });
+    const normalizedFacebookPostUrl = extractFacebookPostUrl(facebookPostRaw);
+    if (normalizedFacebookPostUrl === null) {
+      return res.status(400).json({
+        message:
+          "Facebook input must be a valid facebook.com/fb.watch URL or Facebook iframe embed code.",
+      });
     }
 
     const bodyParagraphs = parseBodyParagraphs(bodyText);
-    if (bodyParagraphs.length === 0) {
+    const hasAnyContent =
+      Boolean(String(title ?? "").trim()) ||
+      bodyParagraphs.length > 0 ||
+      finalImages.length > 0 ||
+      Boolean(normalizedFacebookPostUrl);
+    if (!hasAnyContent) {
       return res.status(400).json({
-        message: "Add announcement text (body). Use a blank line between paragraphs.",
+        message: "Add at least one: title, body, image, or Facebook embed/link.",
       });
     }
 
@@ -332,7 +394,7 @@ async function updateAnnouncement(req, res) {
 
     doc.highlightLabel =
       String(highlightLabel ?? "").trim() || "Today's highlight";
-    doc.title = title.trim();
+    doc.title = String(title ?? "").trim();
     doc.subtitle = String(subtitle ?? "").trim();
     doc.displayDate = String(displayDate ?? "").trim();
     doc.badge = String(badge ?? "").trim();
@@ -341,6 +403,7 @@ async function updateAnnouncement(req, res) {
     doc.hashtags = parseHashtags(hashtagsRaw);
     doc.ctaLabel = String(ctaLabel ?? "").trim();
     doc.ctaUrl = String(ctaUrl ?? "").trim();
+    doc.facebookPostUrl = normalizedFacebookPostUrl;
     doc.images = finalImages;
 
     await doc.save();

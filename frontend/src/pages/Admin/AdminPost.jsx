@@ -152,6 +152,11 @@ const AdminPost = () => {
                       <p className="line-clamp-2 text-sm font-semibold text-white sm:truncate sm:text-base">
                         {row.title}
                       </p>
+                      {row.facebookPostUrl ? (
+                        <span className="shrink-0 rounded-full border border-blue-400/30 bg-blue-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-200/90">
+                          FB link
+                        </span>
+                      ) : null}
                       {index === 0 ? (
                         <span className="shrink-0 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cyan-200/90">
                           On homepage

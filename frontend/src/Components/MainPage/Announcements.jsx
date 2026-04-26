@@ -28,17 +28,50 @@ const FALLBACK_HASHTAGS = [
   "MagingDOSTIskolarKa",
 ];
 
+function getFacebookEmbedUrl(rawUrl) {
+  const input = String(rawUrl ?? "").trim();
+  if (!input) return "";
+  let parsed;
+  try {
+    parsed = new URL(input);
+  } catch {
+    return "";
+  }
+  const host = parsed.hostname.toLowerCase();
+  const allowedHosts = new Set([
+    "facebook.com",
+    "www.facebook.com",
+    "web.facebook.com",
+    "m.facebook.com",
+    "fb.watch",
+    "www.fb.watch",
+  ]);
+  if (!allowedHosts.has(host)) return "";
+  const clean = parsed.toString();
+  const path = parsed.pathname.toLowerCase();
+  const useVideoPlugin =
+    path.includes("/reel/") || path.includes("/videos/") || host.includes("fb.watch");
+  if (useVideoPlugin) {
+    return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(clean)}&show_text=true&width=500&t=0`;
+  }
+  return `https://www.facebook.com/plugins/post.php?href=${encodeURIComponent(clean)}&show_text=true&width=500`;
+}
+
 function ApiArticleBody({ post }) {
   const ctaOk = post.ctaLabel?.trim() && post.ctaUrl?.trim();
+  const paragraphs = Array.isArray(post.bodyParagraphs) ? post.bodyParagraphs : [];
+  const hashtags = Array.isArray(post.hashtags) ? post.hashtags : [];
   return (
     <>
-      <div className="space-y-4 text-left text-sm leading-relaxed text-white/80">
-        {post.bodyParagraphs.map((p, i) => (
-          <p key={i} className="whitespace-pre-wrap">
-            {p}
-          </p>
-        ))}
-      </div>
+      {paragraphs.length > 0 ? (
+        <div className="space-y-4 text-left text-sm leading-relaxed text-white/80">
+          {paragraphs.map((p, i) => (
+            <p key={i} className="whitespace-pre-wrap">
+              {p}
+            </p>
+          ))}
+        </div>
+      ) : null}
 
       {ctaOk ? (
         <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -53,9 +86,9 @@ function ApiArticleBody({ post }) {
         </div>
       ) : null}
 
-      {post.hashtags?.length > 0 ? (
+      {hashtags.length > 0 ? (
         <div className="mt-6 flex flex-wrap gap-2">
-          {post.hashtags.map((tag, i) => (
+          {hashtags.map((tag, i) => (
             <span
               key={`${tag}-${i}`}
               className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-[11px] font-medium text-white/65 transition hover:border-white/20 hover:text-white/80"
@@ -163,16 +196,11 @@ const Announcements = () => {
   }, []);
 
   const post = apiPost;
-  const useApi = Boolean(
-    post?.title?.trim() &&
-      Array.isArray(post.images) &&
-      post.images.length > 0 &&
-      Array.isArray(post.bodyParagraphs) &&
-      post.bodyParagraphs.length > 0
-  );
+  const useApi = Boolean(post);
 
   const slides = useMemo(() => {
     if (!useApi) return FALLBACK_SLIDES;
+    if (!Array.isArray(post.images) || post.images.length === 0) return FALLBACK_SLIDES;
     return post.images.map((img) => ({
       src: img.url,
       alt: img.alt?.trim() || post.title || "Announcement image",
@@ -183,7 +211,7 @@ const Announcements = () => {
     ? post.highlightLabel || "Today's highlight"
     : "Today's highlight";
   const title = useApi
-    ? post.title
+    ? post.title?.trim() || "Latest DOST Marinduque announcement"
     : "2026 DOST-SEI JLSS Campaign Reaches MarSU Santa Cruz and Torrijos";
   const subtitle = useApi
     ? post.subtitle?.trim()
@@ -194,6 +222,7 @@ const Announcements = () => {
     ? post.carouselCaption?.trim() ||
       "Marinduque State University — Santa Cruz & Torrijos campuses"
     : "Marinduque State University — Santa Cruz & Torrijos campuses";
+  const facebookEmbedUrl = useApi ? getFacebookEmbedUrl(post.facebookPostUrl) : "";
 
   const [slideIndex, setSlideIndex] = useState(0);
   const total = slides.length;
@@ -368,6 +397,23 @@ const Announcements = () => {
 
             <div className="relative border-t border-white/10 p-6 sm:p-8 lg:border-l lg:border-t-0">
               {useApi ? <ApiArticleBody post={post} /> : <StaticJlssArticleBody />}
+              {facebookEmbedUrl ? (
+                <div className="mt-6 rounded-xl border border-white/10 bg-black/20 p-3">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-cyan-200/85">
+                    Facebook post
+                  </p>
+                  <iframe
+                    title="Embedded Facebook post"
+                    src={facebookEmbedUrl}
+                    width="100%"
+                    height="620"
+                    style={{ border: "none", overflow: "hidden" }}
+                    scrolling="no"
+                    allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
         </article>

@@ -11,7 +11,7 @@ const imageSchema = new mongoose.Schema(
 const announcementSchema = new mongoose.Schema(
   {
     highlightLabel: { type: String, default: "Today's highlight", trim: true },
-    title: { type: String, required: true, trim: true },
+    title: { type: String, default: "", trim: true },
     subtitle: { type: String, default: "", trim: true },
     displayDate: { type: String, default: "", trim: true },
     badge: { type: String, default: "", trim: true },
@@ -20,6 +20,7 @@ const announcementSchema = new mongoose.Schema(
     hashtags: { type: [String], default: [] },
     ctaLabel: { type: String, default: "", trim: true },
     ctaUrl: { type: String, default: "", trim: true },
+    facebookPostUrl: { type: String, default: "", trim: true },
     images: { type: [imageSchema], default: [] },
   },
   { timestamps: true }
