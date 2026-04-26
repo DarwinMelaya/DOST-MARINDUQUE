@@ -28,4 +28,6 @@ const coralReefSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+coralReefSchema.index({ createdAt: -1 });
+
 module.exports = mongoose.model("CoralReef", coralReefSchema);

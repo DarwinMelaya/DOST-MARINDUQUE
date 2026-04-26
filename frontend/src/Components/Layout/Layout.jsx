@@ -16,7 +16,7 @@ const Layout = () => {
   return (
     <div className="flex min-h-screen bg-slate-950 text-white">
       <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex min-h-screen flex-1 flex-col">
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-white/10 bg-slate-950/70 px-4 py-3 backdrop-blur md:hidden">
           <button
             type="button"
@@ -46,7 +46,7 @@ const Layout = () => {
             <p className="truncate text-[11px] text-white/45">DOST Marinduque</p>
           </div>
         </header>
-        <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-10">
+        <main className="flex-1 min-w-0 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:p-10">
           <Outlet />
         </main>
       </div>

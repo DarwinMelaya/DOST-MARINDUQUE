@@ -74,6 +74,7 @@ const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 const JWT_SECRET = process.env.JWT_SECRET;
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+const RESPONSE_CACHE_TTL_MS = Number(process.env.RESPONSE_CACHE_TTL_MS) || 30000;
 
 app.disable("x-powered-by");
 // Render/Reverse proxies: allow correct IP/secure cookies when needed.
@@ -164,6 +165,92 @@ app.use(
 
 app.use(express.json({ limit: "1mb" }));
 
+const responseCache = new Map();
+
+function getCacheEntry(key) {
+  const hit = responseCache.get(key);
+  if (!hit) return null;
+  if (Date.now() >= hit.expiresAt) {
+    responseCache.delete(key);
+    return null;
+  }
+  return hit;
+}
+
+function setCacheEntry(key, body) {
+  responseCache.set(key, {
+    body,
+    expiresAt: Date.now() + RESPONSE_CACHE_TTL_MS,
+  });
+}
+
+function invalidateCacheByPrefix(prefix) {
+  for (const key of responseCache.keys()) {
+    if (key.startsWith(prefix)) {
+      responseCache.delete(key);
+    }
+  }
+}
+
+function publicCachedJson(handler, { maxAgeSeconds = 15, swrSeconds = 45 } = {}) {
+  return async (req, res, next) => {
+    const key = req.originalUrl;
+    const cached = getCacheEntry(key);
+    const cacheControl = `public, max-age=${maxAgeSeconds}, s-maxage=${maxAgeSeconds}, stale-while-revalidate=${swrSeconds}`;
+    if (cached) {
+      res.set("Cache-Control", cacheControl);
+      res.set("X-Cache", "HIT");
+      return res.json(cached.body);
+    }
+
+    const originalJson = res.json.bind(res);
+    res.json = (body) => {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        setCacheEntry(key, body);
+      }
+      res.set("Cache-Control", cacheControl);
+      res.set("X-Cache", "MISS");
+      return originalJson(body);
+    };
+
+    try {
+      return await handler(req, res, next);
+    } catch (err) {
+      return next(err);
+    }
+  };
+}
+
+function invalidateCacheOnSuccess(handler, prefixes = []) {
+  return async (req, res, next) => {
+    const originalJson = res.json.bind(res);
+    const originalEnd = res.end.bind(res);
+    let invalidated = false;
+    const flush = () => {
+      if (invalidated) return;
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        for (const prefix of prefixes) invalidateCacheByPrefix(prefix);
+        invalidated = true;
+      }
+    };
+
+    res.json = (body) => {
+      flush();
+      return originalJson(body);
+    };
+    res.end = (...args) => {
+      flush();
+      return originalEnd(...args);
+    };
+
+    try {
+      return await handler(req, res, next);
+    } catch (err) {
+      return next(err);
+    }
+  };
+}
+
 app.get("/api/health", (req, res) => {
   res.json({ ok: true });
 });
@@ -172,33 +259,65 @@ app.use("/api/auth/admin", adminAuthRoutes);
 
 // Register on `app` directly so POST /api/projects is always found (nested
 // Router + Express 5 can miss POST on some setups).
-app.get("/api/projects", listProjects);
-app.post("/api/projects", requireAdmin, projectMultipart, createProject);
-app.patch("/api/projects/:id", requireAdmin, projectMultipart, updateProject);
-app.delete("/api/projects/:id", requireAdmin, deleteProject);
+app.get("/api/projects", publicCachedJson(listProjects));
+app.post(
+  "/api/projects",
+  requireAdmin,
+  projectMultipart,
+  invalidateCacheOnSuccess(createProject, ["/api/projects"])
+);
+app.patch(
+  "/api/projects/:id",
+  requireAdmin,
+  projectMultipart,
+  invalidateCacheOnSuccess(updateProject, ["/api/projects"])
+);
+app.delete(
+  "/api/projects/:id",
+  requireAdmin,
+  invalidateCacheOnSuccess(deleteProject, ["/api/projects"])
+);
 
-app.get("/api/coral-reefs", listCoralReefs);
-app.post("/api/coral-reefs", requireAdmin, coralReefMultipart, createCoralReef);
-app.patch("/api/coral-reefs/:id", requireAdmin, coralReefMultipart, updateCoralReef);
-app.delete("/api/coral-reefs/:id", requireAdmin, deleteCoralReef);
+app.get("/api/coral-reefs", publicCachedJson(listCoralReefs));
+app.post(
+  "/api/coral-reefs",
+  requireAdmin,
+  coralReefMultipart,
+  invalidateCacheOnSuccess(createCoralReef, ["/api/coral-reefs"])
+);
+app.patch(
+  "/api/coral-reefs/:id",
+  requireAdmin,
+  coralReefMultipart,
+  invalidateCacheOnSuccess(updateCoralReef, ["/api/coral-reefs"])
+);
+app.delete(
+  "/api/coral-reefs/:id",
+  requireAdmin,
+  invalidateCacheOnSuccess(deleteCoralReef, ["/api/coral-reefs"])
+);
 
 app.get("/api/admin/dashboard", requireAdmin, getAdminDashboard);
 
-app.get("/api/announcements/featured", getFeaturedAnnouncement);
+app.get("/api/announcements/featured", publicCachedJson(getFeaturedAnnouncement));
 app.get("/api/announcements", requireAdmin, listAnnouncements);
 app.post(
   "/api/announcements",
   requireAdmin,
   announcementImages,
-  createAnnouncement
+  invalidateCacheOnSuccess(createAnnouncement, ["/api/announcements/featured"])
 );
 app.patch(
   "/api/announcements/:id",
   requireAdmin,
   announcementImages,
-  updateAnnouncement
+  invalidateCacheOnSuccess(updateAnnouncement, ["/api/announcements/featured"])
 );
-app.delete("/api/announcements/:id", requireAdmin, deleteAnnouncement);
+app.delete(
+  "/api/announcements/:id",
+  requireAdmin,
+  invalidateCacheOnSuccess(deleteAnnouncement, ["/api/announcements/featured"])
+);
 
 app.use((err, _req, res, next) => {
   if (err instanceof multer.MulterError) {

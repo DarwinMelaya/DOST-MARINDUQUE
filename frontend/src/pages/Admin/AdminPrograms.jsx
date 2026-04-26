@@ -362,10 +362,10 @@ const AdminPrograms = () => {
           ) : null}
         </>
       ) : (
-        <div className="fixed inset-0 z-[100] flex h-full min-h-0 flex-col bg-slate-950 md:flex-row">
-          <div className="relative flex min-h-[36vh] w-full flex-[1.2] flex-col md:min-h-0 md:overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex h-full min-h-0 flex-col overflow-y-auto bg-slate-950 md:flex-row md:overflow-hidden">
+          <div className="relative flex min-h-[42vh] w-full flex-[1.2] flex-col md:min-h-0 md:overflow-hidden">
             <AdminProgramMap
-              className="h-full min-h-[36vh] rounded-none border-x-0 border-t-0 md:min-h-0"
+              className="h-full min-h-[42vh] rounded-none border-x-0 border-t-0 md:min-h-0"
               splitLayout
               projects={projects}
               pickMode
@@ -373,7 +373,7 @@ const AdminPrograms = () => {
               pickerPosition={pickerPosition}
             />
           </div>
-          <div className="flex min-h-0 w-full min-w-0 flex-[0.95] flex-col border-t border-white/10 md:max-w-xl md:border-l md:border-t-0 lg:max-w-lg">
+          <div className="flex min-h-0 w-full min-w-0 flex-[0.95] flex-col overflow-y-auto border-t border-white/10 md:max-w-xl md:border-l md:border-t-0 lg:max-w-lg">
             <ProgramsModals
               onClose={closeModal}
               onSave={handleSave}
