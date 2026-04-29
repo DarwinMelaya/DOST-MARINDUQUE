@@ -14,11 +14,37 @@ import L from "leaflet";
 import { createProgramDivIcon, fixLeafletDefaultIcons } from "../Map/programMarkers";
 
 const STATUS_STYLES = {
-  Healthy: { label: "Healthy", color: "#22C55E" },
-  "Bleached Damaged": { label: "Bleached Damaged", color: "#F59E0B" },
-  Recovering: { label: "Recovering", color: "#38BDF8" },
-  Dead: { label: "Dead", color: "#EF4444" },
+  Healthy: { label: "Healthy", color: "#2DD4BF", accent: "#99F6E4" },
+  "Bleached Damaged": {
+    label: "Bleached Damaged",
+    color: "#FB923C",
+    accent: "#FED7AA",
+  },
+  Recovering: { label: "Recovering", color: "#60A5FA", accent: "#BFDBFE" },
+  Dead: { label: "Dead", color: "#F87171", accent: "#FECACA" },
 };
+
+function getStatusStyle(status) {
+  return STATUS_STYLES[status] ?? STATUS_STYLES.Recovering;
+}
+
+function createCoralDivIcon({ label, color, accent }) {
+  const shortLabel = String(label ?? "").trim().slice(0, 1).toUpperCase() || "R";
+  return L.divIcon({
+    className: "dost-coral-marker",
+    iconSize: [38, 38],
+    iconAnchor: [19, 19],
+    popupAnchor: [0, -16],
+    html: `
+      <div style="position:relative;height:38px;width:38px;">
+        <span style="position:absolute;inset:0;border-radius:9999px;background:${color};opacity:.22;box-shadow:0 0 22px ${color};animation:pulse 1.9s ease-in-out infinite;"></span>
+        <span style="position:absolute;inset:3px;border-radius:9999px;background:radial-gradient(circle at 30% 30%,${accent} 0%,${color} 45%,#111827 100%);border:1px solid rgba(255,255,255,.3);box-shadow:0 0 20px ${color}aa,inset 0 0 14px rgba(255,255,255,.12);"></span>
+        <span style="position:absolute;inset:0;display:grid;place-items:center;color:white;font-size:15px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.8));">🪸</span>
+        <span style="position:absolute;right:-3px;bottom:-3px;display:grid;place-items:center;height:15px;width:15px;border-radius:9999px;background:#020617;border:1px solid rgba(255,255,255,.22);color:${accent};font-size:9px;font-weight:700;">${shortLabel}</span>
+      </div>
+    `.trim(),
+  });
+}
 
 function hasCoordinates(record) {
   return (
@@ -180,7 +206,7 @@ const CoralReefMap = ({
           />
 
           {mappedRecords.map((record) => {
-            const style = STATUS_STYLES[record.coralStatus] ?? STATUS_STYLES.Recovering;
+            const style = getStatusStyle(record.coralStatus);
             const areaLatLngs = normalizeAreaCoordinates(record.areaCoordinates);
             const photos =
               Array.isArray(record.photos) && record.photos.length > 0
@@ -196,19 +222,28 @@ const CoralReefMap = ({
                     positions={areaLatLngs}
                     pathOptions={{
                       color: style.color,
-                      weight: 2,
-                      opacity: 0.95,
+                      weight: 2.5,
+                      dashArray: "7 5",
+                      opacity: 0.98,
                       fillColor: style.color,
-                      fillOpacity: 0.2,
+                      fillOpacity: 0.26,
                     }}
-                  />
+                  >
+                    <Tooltip direction="center" opacity={0.95}>
+                      <span style={{ fontWeight: 700 }}>
+                        {record.coralName}
+                      </span>{" "}
+                      reef zone
+                    </Tooltip>
+                  </Polygon>
                 ) : null}
                 <Marker
                   key={record.id}
                   position={[record.location.latitude, record.location.longitude]}
-                  icon={createProgramDivIcon({
-                    label: style.label.slice(0, 1),
+                  icon={createCoralDivIcon({
+                    label: style.label,
                     color: style.color,
+                    accent: style.accent,
                   })}
                 >
                   <Tooltip direction="top" offset={[0, -6]} opacity={1}>
@@ -240,6 +275,18 @@ const CoralReefMap = ({
                           Status: <b>{record.coralStatus}</b>
                         </div>
                         <div>
+                          Reef intensity:{" "}
+                          <b style={{ color: style.color }}>
+                            {record.coralStatus === "Healthy"
+                              ? "High biodiversity"
+                              : record.coralStatus === "Recovering"
+                                ? "Regenerating"
+                                : record.coralStatus === "Bleached Damaged"
+                                  ? "Stress signals"
+                                  : "Critical condition"}
+                          </b>
+                        </div>
+                        <div>
                           Photos: <b>{photos.length}</b>
                         </div>
                         <div>
@@ -262,11 +309,11 @@ const CoralReefMap = ({
             <Polygon
               positions={draftAreaLatLngs}
               pathOptions={{
-                color: "#FDB913",
-                weight: 2,
+                color: "#FB7185",
+                weight: 2.5,
                 dashArray: "6 5",
                 opacity: 0.95,
-                fillColor: "#FDB913",
+                fillColor: "#FB7185",
                 fillOpacity: draftAreaLatLngs.length >= 3 ? 0.18 : 0.04,
               }}
             />
@@ -288,9 +335,10 @@ const CoralReefMap = ({
                     }
                   : undefined
               }
-              icon={createProgramDivIcon({
+              icon={createCoralDivIcon({
                 label: String(idx + 1),
-                color: "#FDB913",
+                color: "#FB7185",
+                accent: "#FECDD3",
               })}
             >
               <Tooltip direction="top" offset={[0, -6]} opacity={1}>
@@ -320,7 +368,18 @@ const CoralReefMap = ({
             <div className="mt-2 grid gap-2">
               {Object.entries(STATUS_STYLES).map(([status, cfg]) => (
                 <div key={status} className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: cfg.color }} />
+                  <span
+                    className="relative inline-flex h-3 w-3 items-center justify-center"
+                  >
+                    <span
+                      className="absolute inline-flex h-3 w-3 rounded-full opacity-45 motion-safe:animate-ping"
+                      style={{ backgroundColor: cfg.color }}
+                    />
+                    <span
+                      className="relative h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: cfg.color }}
+                    />
+                  </span>
                   <span className="font-semibold text-white/90">{cfg.label}</span>
                   <span className="text-white/50">•</span>
                   <span className="tabular-nums text-white/80">

@@ -177,6 +177,7 @@ const Map = () => {
 
   // Boac (provincial capital) as focal point
   const center = useMemo(() => L.latLng(13.4463, 122.0837), []);
+  const isCoralView = mapView === "CORAL_REEFS";
 
   useEffect(() => {
     let cancelled = false;
@@ -258,16 +259,24 @@ const Map = () => {
         isFullscreen ? "min-h-screen h-screen" : "min-h-screen"
       }`}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(34,211,238,.18),transparent_55%)]" />
+      <div
+        className={`pointer-events-none absolute inset-0 ${
+          isCoralView
+            ? "bg-[radial-gradient(ellipse_at_top,rgba(251,113,133,.22),transparent_55%)]"
+            : "bg-[radial-gradient(ellipse_at_top,rgba(34,211,238,.18),transparent_55%)]"
+        }`}
+      />
       <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:linear-gradient(to_right,rgba(99,179,237,.30)_1px,transparent_1px),linear-gradient(to_bottom,rgba(99,179,237,.20)_1px,transparent_1px)] [background-size:48px_48px]" />
 
       <div className="relative flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <div className="text-left">
           <div className="text-xs font-medium tracking-wide text-white/60">
-            Focus Map
+            {isCoralView ? "Coral Intelligence Map" : "Focus Map"}
           </div>
           <div className="mt-0.5 text-sm font-semibold text-white">
-            Marinduque, Philippines
+            {isCoralView
+              ? "Marinduque Reef Watch"
+              : "Marinduque, Philippines"}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -314,7 +323,7 @@ const Map = () => {
             type="button"
             onClick={() => setFiltersOpen((v) => !v)}
             disabled={mapView !== "PROGRAMS"}
-            className="inline-flex h-10 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 sm:h-11 sm:px-4 sm:text-sm"
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 disabled:cursor-not-allowed disabled:opacity-45 sm:h-11 sm:px-4 sm:text-sm"
             aria-expanded={filtersOpen}
             aria-controls="map-filters-panel"
           >
@@ -374,8 +383,20 @@ const Map = () => {
           </button>
 
           <div className="flex flex-col items-end gap-1">
-            <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 sm:inline-flex">
-              <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,.65)]" />
+            <div
+              className={`hidden items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium sm:inline-flex ${
+                isCoralView
+                  ? "border-rose-300/30 bg-rose-300/10 text-rose-100"
+                  : "border-white/10 bg-white/5 text-white/80"
+              }`}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  isCoralView
+                    ? "bg-rose-300 shadow-[0_0_18px_rgba(251,113,133,.75)]"
+                    : "bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,.65)]"
+                }`}
+              />
               {mapView === "PROGRAMS"
                 ? `${programSites.length} site${programSites.length === 1 ? "" : "s"}`
                 : `${coralRecords.length} reef${coralRecords.length === 1 ? "" : "s"}`}
