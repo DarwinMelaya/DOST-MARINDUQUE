@@ -13,6 +13,7 @@ import AddCoralReefModal from "../../Components/Modals/AdminModals/AddCoralReefM
 
 const CoralReefMapping = () => {
   const [records, setRecords] = useState([]);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
@@ -25,6 +26,8 @@ const CoralReefMapping = () => {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      setIsInitialLoading(true);
+      const loadingStartedAt = Date.now();
       try {
         const list = await fetchCoralReefs();
         if (!cancelled) {
@@ -39,6 +42,15 @@ const CoralReefMapping = () => {
           );
           setLoadError(msg);
           toast.error(msg);
+        }
+      } finally {
+        if (!cancelled) {
+          const elapsed = Date.now() - loadingStartedAt;
+          const minLoaderMs = 800;
+          const remaining = Math.max(0, minLoaderMs - elapsed);
+          window.setTimeout(() => {
+            if (!cancelled) setIsInitialLoading(false);
+          }, remaining);
         }
       }
     })();
@@ -147,7 +159,25 @@ const CoralReefMapping = () => {
   };
 
   return (
-    <div className="w-full max-w-none">
+    <div className="relative w-full max-w-none">
+      {isInitialLoading ? (
+        <div className="absolute inset-0 z-[120] flex min-h-[55vh] items-center justify-center rounded-2xl border border-white/10 bg-slate-950/95 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 px-6 text-center">
+            <span className="h-11 w-11 animate-spin rounded-full border-4 border-cyan-400/25 border-t-cyan-300" />
+            <p className="text-sm font-medium text-white/85">
+              Loading coral reef data...
+            </p>
+            <p className="text-xs text-white/55">
+              Please wait, enabled ang controls kapag ready na ang records.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      <div
+        className={isInitialLoading ? "pointer-events-none select-none opacity-70" : ""}
+        aria-busy={isInitialLoading}
+      >
       {loadError ? (
         <p className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100/95">
           {loadError}
@@ -167,6 +197,7 @@ const CoralReefMapping = () => {
         <button
           type="button"
           onClick={openModal}
+          disabled={isInitialLoading}
           className="w-full shrink-0 rounded-xl bg-gradient-to-r from-[#0054A6] to-[#0B3B76] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#0054A6]/25 transition hover:brightness-110 sm:w-auto"
         >
           Add coral reef
@@ -330,6 +361,7 @@ const CoralReefMapping = () => {
           )}
         </>
       )}
+      </div>
     </div>
   );
 };
