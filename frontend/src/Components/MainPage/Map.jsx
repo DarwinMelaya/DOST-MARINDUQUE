@@ -61,8 +61,9 @@ function MapInvalidateOnFullscreen() {
   return null;
 }
 
-const Map = () => {
+const Map = ({ onInitialLoadComplete }) => {
   const rootRef = useRef(null);
+  const didNotifyReadyRef = useRef(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [mapView, setMapView] = useState("PROGRAMS"); // PROGRAMS | CORAL_REEFS
   const geo = useGeolocation();
@@ -181,12 +182,20 @@ const Map = () => {
 
   useEffect(() => {
     let cancelled = false;
+    const notifyReady = () => {
+      if (didNotifyReadyRef.current) return;
+      didNotifyReadyRef.current = true;
+      onInitialLoadComplete?.();
+    };
+
     (async () => {
       try {
         const list = await fetchProjects({ view: "map", pinnedOnly: true });
         if (!cancelled) setProjects(Array.isArray(list) ? list : []);
       } catch {
         if (!cancelled) setProjects([]);
+      } finally {
+        if (!cancelled) notifyReady();
       }
     })();
     return () => {

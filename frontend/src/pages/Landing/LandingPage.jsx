@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Head from "../../Components/MainPage/Head";
 import About from "../../Components/MainPage/About";
 import ContactUs from "../../Components/MainPage/ContactUs";
@@ -6,6 +6,7 @@ import Map from "../../Components/MainPage/Map";
 import Programs from "../../Components/MainPage/Programs";
 import Announcements from "../../Components/MainPage/Announcements";
 import ChatBot from "../../Components/Modals/ChatBot/ChatBot";
+import Loading from "../../Components/Loading/Loading";
 
 const scrollToSection = (id) => {
   document.getElementById(id)?.scrollIntoView({
@@ -18,6 +19,23 @@ const LandingPage = () => {
   const mapSectionRef = useRef(null);
   const [mapNavVisible, setMapNavVisible] = useState(false);
   const [chatBotOpen, setChatBotOpen] = useState(false);
+  const [pendingLoads, setPendingLoads] = useState(
+    () => new Set(["announcements", "programs", "map"]),
+  );
+  const [isPageLoading, setIsPageLoading] = useState(true);
+
+  const markInitialSectionLoaded = useCallback((section) => {
+    setPendingLoads((prev) => {
+      if (!prev.has(section)) return prev;
+      const next = new Set(prev);
+      next.delete(section);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (pendingLoads.size === 0) setIsPageLoading(false);
+  }, [pendingLoads]);
 
   useEffect(() => {
     const el = mapSectionRef.current;
@@ -39,11 +57,14 @@ const LandingPage = () => {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
+      {isPageLoading ? <Loading /> : null}
       <div className="w-full">
         <Head />
 
         <section id="announcements" className="w-full scroll-mt-24 bg-black">
-          <Announcements />
+          <Announcements
+            onInitialLoadComplete={() => markInitialSectionLoaded("announcements")}
+          />
         </section>
 
         <section
@@ -51,11 +72,11 @@ const LandingPage = () => {
           ref={mapSectionRef}
           className="relative w-full scroll-mt-24 bg-black"
         >
-          <Map />
+          <Map onInitialLoadComplete={() => markInitialSectionLoaded("map")} />
         </section>
 
         <section id="programs" className="w-full scroll-mt-24 bg-black">
-          <Programs />
+          <Programs onInitialLoadComplete={() => markInitialSectionLoaded("programs")} />
         </section>
 
         <section id="about" className="w-full scroll-mt-24 bg-black">
@@ -125,8 +146,11 @@ const LandingPage = () => {
       <button
         type="button"
         onClick={() => setChatBotOpen(true)}
-        className="fixed bottom-5 right-5 z-[1050] inline-flex h-28 w-28 items-center justify-center bg-transparent text-white transition hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 sm:bottom-7 sm:right-7 sm:h-36 sm:w-36"
+        className={`fixed bottom-5 right-5 z-[1050] inline-flex h-28 w-28 items-center justify-center bg-transparent text-white transition hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 sm:bottom-7 sm:right-7 sm:h-36 sm:w-36 ${
+          isPageLoading ? "pointer-events-none opacity-0" : ""
+        }`}
         aria-label="Open ChatBot"
+        disabled={isPageLoading}
       >
         <span className="relative inline-flex h-full w-full items-center justify-center">
           <video

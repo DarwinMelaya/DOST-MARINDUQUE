@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { getApiErrorMessage } from "../../api/client";
 import { fetchProjects } from "../../api/projectsApi";
@@ -34,13 +34,20 @@ const STATIC_PROGRAMS = [
   },
 ];
 
-const Programs = () => {
+const Programs = ({ onInitialLoadComplete }) => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const didNotifyReadyRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
+    const notifyReady = () => {
+      if (didNotifyReadyRef.current) return;
+      didNotifyReadyRef.current = true;
+      onInitialLoadComplete?.();
+    };
+
     (async () => {
       try {
         const list = await fetchProjects();
@@ -54,7 +61,10 @@ const Programs = () => {
           setProjects([]);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          notifyReady();
+        }
       }
     })();
     return () => {

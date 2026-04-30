@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { fetchFeaturedAnnouncement } from "../../api/announcementsApi";
 import { getApiErrorMessage } from "../../api/client";
@@ -169,12 +169,19 @@ function StaticJlssArticleBody() {
   );
 }
 
-const Announcements = () => {
+const Announcements = ({ onInitialLoadComplete }) => {
   const [apiPost, setApiPost] = useState(null);
   const [fetchFailed, setFetchFailed] = useState(false);
+  const didNotifyReadyRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
+    const notifyReady = () => {
+      if (didNotifyReadyRef.current) return;
+      didNotifyReadyRef.current = true;
+      onInitialLoadComplete?.();
+    };
+
     (async () => {
       try {
         const announcement = await fetchFeaturedAnnouncement();
@@ -188,6 +195,8 @@ const Announcements = () => {
           setApiPost(null);
           setFetchFailed(true);
         }
+      } finally {
+        if (!cancelled) notifyReady();
       }
     })();
     return () => {
