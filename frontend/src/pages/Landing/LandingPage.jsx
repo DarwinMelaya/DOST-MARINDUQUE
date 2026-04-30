@@ -143,32 +143,46 @@ const LandingPage = () => {
       </div>
 
       {/* ChatBot launcher */}
-      <button
-        type="button"
-        onClick={() => setChatBotOpen(true)}
-        className={`fixed bottom-5 right-5 z-[1050] inline-flex h-28 w-28 items-center justify-center bg-transparent text-white transition hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 sm:bottom-7 sm:right-7 sm:h-36 sm:w-36 ${
-          isPageLoading ? "pointer-events-none opacity-0" : ""
-        }`}
-        aria-label="Open ChatBot"
-        disabled={isPageLoading}
-      >
-        <span className="relative inline-flex h-full w-full items-center justify-center">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="auto"
-            className="h-full w-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.45)]"
-          >
-            <source src="/Assets/Chatbot/Chatbot.webm" type="video/webm" />
-          </video>
-          <span className="absolute -top-5 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-full border border-cyan-200/30 bg-slate-900/90 px-2 py-1 text-[10px] font-semibold text-cyan-100 shadow-[0_8px_20px_rgba(0,0,0,.4)] sm:-top-7 sm:text-xs">
-            <span className="text-[11px] sm:text-sm">💬</span>
-            Chat tayo!
+      {!chatBotOpen ? (
+        <button
+          type="button"
+          onClick={() => setChatBotOpen(true)}
+          className={`fixed bottom-5 right-5 z-[1050] inline-flex h-28 w-28 items-center justify-center bg-transparent text-white transition hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 sm:bottom-7 sm:right-7 sm:h-36 sm:w-36 ${
+            isPageLoading ? "pointer-events-none opacity-0" : ""
+          }`}
+          aria-label="Open ChatBot"
+          disabled={isPageLoading}
+        >
+          <span className="relative inline-flex h-full w-full items-center justify-center">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-4 rounded-full bg-cyan-400/20 blur-2xl"
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-6 rounded-full border border-cyan-300/35 shadow-[0_0_26px_rgba(34,211,238,0.5),0_0_46px_rgba(59,130,246,0.35)]"
+            />
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-5 rounded-full border border-blue-300/30 opacity-80 motion-safe:animate-pulse"
+            />
+            <video
+              autoPlay
+              loop
+              muted
+              playsInline
+              preload="auto"
+              className="relative z-10 h-full w-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.45)]"
+            >
+              <source src="/Assets/Chatbot/Chatbot.webm" type="video/webm" />
+            </video>
+            <span className="absolute -top-5 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-full border border-cyan-200/30 bg-slate-900/90 px-2 py-1 text-[10px] font-semibold text-cyan-100 shadow-[0_8px_20px_rgba(0,0,0,.4)] sm:-top-7 sm:text-xs">
+              <span className="text-[11px] sm:text-sm">💬</span>
+              Chat tayo!
+            </span>
           </span>
-        </span>
-      </button>
+        </button>
+      ) : null}
 
       <ChatBot open={chatBotOpen} onClose={() => setChatBotOpen(false)} />
     </main>
