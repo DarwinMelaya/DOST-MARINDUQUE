@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 
 const CORAL_STATUSES = ["Healthy", "Bleached Damaged", "Recovering", "Dead"];
+const REEF_STRUCTURES = ["CNU", "Reefblocks"];
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
 const MAX_PHOTOS = 3;
 
@@ -26,6 +27,7 @@ const AddCoralReefModal = ({
 }) => {
   const [coralName, setCoralName] = useState("");
   const [coralType, setCoralType] = useState("");
+  const [reefStructure, setReefStructure] = useState("CNU");
   const [description, setDescription] = useState("");
   const [coralStatus, setCoralStatus] = useState("Healthy");
   const [photoFiles, setPhotoFiles] = useState([]);
@@ -36,6 +38,7 @@ const AddCoralReefModal = ({
     if (mode === "edit" && initialValues) {
       setCoralName(initialValues.coralName ?? "");
       setCoralType(initialValues.coralType ?? "");
+      setReefStructure(initialValues.reefStructure ?? "CNU");
       setDescription(initialValues.description ?? "");
       setCoralStatus(initialValues.coralStatus ?? "Healthy");
       setPhotoFiles([]);
@@ -47,6 +50,7 @@ const AddCoralReefModal = ({
     if (mode === "add") {
       setCoralName("");
       setCoralType("");
+      setReefStructure("CNU");
       setDescription("");
       setCoralStatus("Healthy");
       setPhotoFiles([]);
@@ -74,6 +78,7 @@ const AddCoralReefModal = ({
     if (mode === "edit" && initialValues) {
       setCoralName(initialValues.coralName ?? "");
       setCoralType(initialValues.coralType ?? "");
+      setReefStructure(initialValues.reefStructure ?? "CNU");
       setDescription(initialValues.description ?? "");
       setCoralStatus(initialValues.coralStatus ?? "Healthy");
       onLatitudeChange(
@@ -95,6 +100,7 @@ const AddCoralReefModal = ({
     }
     setCoralName("");
     setCoralType("");
+    setReefStructure("CNU");
     setDescription("");
     setCoralStatus("Healthy");
     onLatitudeChange("");
@@ -131,6 +137,7 @@ const AddCoralReefModal = ({
       await onSave({
         coralName,
         coralType,
+        reefStructure,
         description,
         coralStatus,
         location: {
@@ -203,6 +210,24 @@ const AddCoralReefModal = ({
               className={inputClass}
               placeholder="e.g. Branching coral"
             />
+          </div>
+
+          <div>
+            <label className={labelClass} htmlFor="reef-structure">
+              Reef structure
+            </label>
+            <select
+              id="reef-structure"
+              value={reefStructure}
+              onChange={(e) => setReefStructure(e.target.value)}
+              className={inputClass}
+            >
+              {REEF_STRUCTURES.map((structure) => (
+                <option key={structure} value={structure} className="bg-slate-900">
+                  {structure}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

@@ -18,6 +18,7 @@ function serialize(doc) {
     id: String(o._id),
     coralName: o.coralName,
     coralType: o.coralType,
+    reefStructure: o.reefStructure || "CNU",
     description: o.description ?? "",
     coralStatus: o.coralStatus,
     location: {
@@ -88,6 +89,7 @@ function normalizeBody(req) {
   return {
     coralName: req.body.coralName,
     coralType: req.body.coralType,
+    reefStructure: req.body.reefStructure,
     description: req.body.description,
     coralStatus: req.body.coralStatus,
     location,
@@ -133,11 +135,16 @@ function parseLocation(location) {
 function validateBody(body) {
   const coralName = String(body.coralName ?? "").trim();
   const coralType = String(body.coralType ?? "").trim();
+  const reefStructure = String(body.reefStructure ?? "").trim();
   const description = String(body.description ?? "").trim();
   const coralStatus = String(body.coralStatus ?? "").trim();
 
   if (!coralName || !coralType) {
     return { error: "Coral name and coral type are required." };
+  }
+  const allowedReefStructures = ["CNU", "Reefblocks"];
+  if (!allowedReefStructures.includes(reefStructure)) {
+    return { error: "Reef structure must be either CNU or Reefblocks." };
   }
 
   const allowedStatus = ["Healthy", "Bleached Damaged", "Recovering", "Dead"];
@@ -154,6 +161,7 @@ function validateBody(body) {
     values: {
       coralName,
       coralType,
+      reefStructure,
       description,
       coralStatus,
       location: { latitude: loc.latitude, longitude: loc.longitude },
@@ -297,6 +305,7 @@ async function updateCoralReef(req, res) {
 
     existing.coralName = v.values.coralName;
     existing.coralType = v.values.coralType;
+    existing.reefStructure = v.values.reefStructure;
     existing.description = v.values.description;
     existing.coralStatus = v.values.coralStatus;
     existing.location = v.values.location;

@@ -4,6 +4,12 @@ const coralReefSchema = new mongoose.Schema(
   {
     coralName: { type: String, required: true, trim: true },
     coralType: { type: String, required: true, trim: true },
+    reefStructure: {
+      type: String,
+      required: true,
+      enum: ["CNU", "Reefblocks"],
+      default: "CNU",
+    },
     description: { type: String, default: "", trim: true },
     coralStatus: {
       type: String,

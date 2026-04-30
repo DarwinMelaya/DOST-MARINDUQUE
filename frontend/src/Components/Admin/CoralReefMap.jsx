@@ -272,6 +272,9 @@ const CoralReefMap = ({
                           Type: <b>{record.coralType}</b>
                         </div>
                         <div>
+                          Structure: <b>{record.reefStructure || "CNU"}</b>
+                        </div>
+                        <div>
                           Status: <b>{record.coralStatus}</b>
                         </div>
                         <div>

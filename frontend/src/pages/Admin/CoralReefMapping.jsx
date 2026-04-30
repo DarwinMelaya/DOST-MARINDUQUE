@@ -259,6 +259,7 @@ const CoralReefMapping = () => {
                     <th className="px-3 py-3 sm:px-4">Photo</th>
                     <th className="px-3 py-3 sm:px-4">Coral name</th>
                     <th className="px-3 py-3 sm:px-4">Coral type</th>
+                    <th className="px-3 py-3 sm:px-4">Reef structure</th>
                     <th className="px-3 py-3 sm:px-4">Description</th>
                     <th className="px-3 py-3 sm:px-4">Status</th>
                     <th className="px-3 py-3 sm:px-4">Location</th>
@@ -309,6 +310,11 @@ const CoralReefMapping = () => {
                         </td>
                         <td className="max-w-[150px] px-3 py-2.5 align-middle text-white/80 sm:px-4">
                           <span className="line-clamp-2">{record.coralType}</span>
+                        </td>
+                        <td className="max-w-[140px] px-3 py-2.5 align-middle text-white/80 sm:px-4">
+                          <span className="line-clamp-2">
+                            {record.reefStructure || "CNU"}
+                          </span>
                         </td>
                         <td className="max-w-[220px] px-3 py-2.5 align-middle text-white/65 sm:px-4">
                           <span className="line-clamp-2">{record.description || "-"}</span>

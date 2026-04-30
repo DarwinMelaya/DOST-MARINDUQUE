@@ -81,6 +81,7 @@ const Map = ({ onInitialLoadComplete }) => {
 
   const [projects, setProjects] = useState([]);
   const [coralRecords, setCoralRecords] = useState([]);
+  const [coralStructureFilter, setCoralStructureFilter] = useState("ALL");
   const [coralLoadedOnce, setCoralLoadedOnce] = useState(false);
   const [filters, setFilters] = useState({
     q: "",
@@ -179,6 +180,12 @@ const Map = ({ onInitialLoadComplete }) => {
   // Boac (provincial capital) as focal point
   const center = useMemo(() => L.latLng(13.4463, 122.0837), []);
   const isCoralView = mapView === "CORAL_REEFS";
+  const filteredCoralRecords = useMemo(() => {
+    if (coralStructureFilter === "ALL") return coralRecords;
+    return coralRecords.filter(
+      (record) => (record?.reefStructure || "CNU") === coralStructureFilter
+    );
+  }, [coralRecords, coralStructureFilter]);
 
   useEffect(() => {
     let cancelled = false;
@@ -299,6 +306,7 @@ const Map = ({ onInitialLoadComplete }) => {
               onClick={() => {
                 setMapView("PROGRAMS");
                 setFiltersOpen(false);
+                setCoralStructureFilter("ALL");
               }}
               className={`h-8 rounded-full px-3 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 sm:h-9 sm:px-4 ${
                 mapView === "PROGRAMS"
@@ -357,6 +365,25 @@ const Map = ({ onInitialLoadComplete }) => {
             ) : null}
           </button>
 
+          {mapView === "CORAL_REEFS" ? (
+            <select
+              value={coralStructureFilter}
+              onChange={(e) => setCoralStructureFilter(e.target.value)}
+              className="h-10 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 sm:h-11 sm:text-sm"
+              aria-label="Filter coral reefs by structure"
+            >
+              <option value="ALL" className="bg-slate-900">
+                All structures
+              </option>
+              <option value="CNU" className="bg-slate-900">
+                CNU
+              </option>
+              <option value="Reefblocks" className="bg-slate-900">
+                Reefblocks
+              </option>
+            </select>
+          ) : null}
+
           <button
             type="button"
             onClick={() => void toggleFullscreen()}
@@ -408,7 +435,9 @@ const Map = ({ onInitialLoadComplete }) => {
               />
               {mapView === "PROGRAMS"
                 ? `${programSites.length} site${programSites.length === 1 ? "" : "s"}`
-                : `${coralRecords.length} reef${coralRecords.length === 1 ? "" : "s"}`}
+                : `${filteredCoralRecords.length} reef${
+                    filteredCoralRecords.length === 1 ? "" : "s"
+                  }`}
             </div>
             <div className="max-w-[min(100vw-2rem,240px)] text-right text-[10px] leading-tight text-white/50">
               {geo.loading ? (
@@ -692,7 +721,7 @@ const Map = ({ onInitialLoadComplete }) => {
         ) : (
           <CoralReefMap
             className="h-full min-h-[520px] w-full rounded-none border-x-0 border-b-0 border-t-0"
-            records={coralRecords}
+            records={filteredCoralRecords}
           />
         )}
 

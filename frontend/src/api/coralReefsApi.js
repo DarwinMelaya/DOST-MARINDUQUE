@@ -26,6 +26,7 @@ export async function createCoralReef(payload) {
   const fd = new FormData();
   fd.append("coralName", rest.coralName ?? "");
   fd.append("coralType", rest.coralType ?? "");
+  fd.append("reefStructure", rest.reefStructure ?? "");
   fd.append("description", rest.description ?? "");
   fd.append("coralStatus", rest.coralStatus ?? "");
   fd.append("location", JSON.stringify(rest.location ?? {}));
@@ -51,6 +52,7 @@ export async function updateCoralReef(id, payload) {
   const fd = new FormData();
   fd.append("coralName", rest.coralName ?? "");
   fd.append("coralType", rest.coralType ?? "");
+  fd.append("reefStructure", rest.reefStructure ?? "");
   fd.append("description", rest.description ?? "");
   fd.append("coralStatus", rest.coralStatus ?? "");
   fd.append("location", JSON.stringify(rest.location ?? {}));
