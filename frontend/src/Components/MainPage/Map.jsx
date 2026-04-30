@@ -295,7 +295,7 @@ const Map = ({ onInitialLoadComplete }) => {
               : "Marinduque, Philippines"}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <div
             className="inline-flex h-10 items-center rounded-full border border-white/10 bg-white/5 p-1 text-xs font-semibold text-white/85 sm:h-11 sm:text-sm"
             role="tablist"
@@ -336,34 +336,35 @@ const Map = ({ onInitialLoadComplete }) => {
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setFiltersOpen((v) => !v)}
-            disabled={mapView !== "PROGRAMS"}
-            className="inline-flex h-10 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 disabled:cursor-not-allowed disabled:opacity-45 sm:h-11 sm:px-4 sm:text-sm"
-            aria-expanded={filtersOpen}
-            aria-controls="map-filters-panel"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-              className="h-4 w-4"
-              aria-hidden
+          {mapView === "PROGRAMS" ? (
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((v) => !v)}
+              className="inline-flex h-10 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 sm:h-11 sm:px-4 sm:text-sm"
+              aria-expanded={filtersOpen}
+              aria-controls="map-filters-panel"
             >
-              <path
-                fillRule="evenodd"
-                d="M3 5.25A.75.75 0 0 1 3.75 4.5h16.5a.75.75 0 0 1 .53 1.28l-6.28 6.28v6.19a.75.75 0 0 1-1.06.67l-3-1.5a.75.75 0 0 1-.41-.67v-4.69L3.22 5.78A.75.75 0 0 1 3 5.25Z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Filters
-            {activeFilterCount > 0 ? (
-              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-cyan-400/15 px-1.5 text-[11px] font-bold text-cyan-100 ring-1 ring-cyan-400/25">
-                {activeFilterCount}
-              </span>
-            ) : null}
-          </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="h-4 w-4"
+                aria-hidden
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M3 5.25A.75.75 0 0 1 3.75 4.5h16.5a.75.75 0 0 1 .53 1.28l-6.28 6.28v6.19a.75.75 0 0 1-1.06.67l-3-1.5a.75.75 0 0 1-.41-.67v-4.69L3.22 5.78A.75.75 0 0 1 3 5.25Z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Filters
+              {activeFilterCount > 0 ? (
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-cyan-400/15 px-1.5 text-[11px] font-bold text-cyan-100 ring-1 ring-cyan-400/25">
+                  {activeFilterCount}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
 
           {mapView === "CORAL_REEFS" ? (
             <select
@@ -389,8 +390,20 @@ const Map = ({ onInitialLoadComplete }) => {
             onClick={() => void toggleFullscreen()}
             className="inline-flex h-10 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/85 transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 sm:h-11 sm:px-4 sm:text-sm"
             aria-pressed={isFullscreen}
-            title={isFullscreen ? "Exit fullscreen" : "View map fullscreen"}
-            aria-label={isFullscreen ? "Exit fullscreen" : "View map fullscreen"}
+            title={
+              isFullscreen
+                ? "Exit fullscreen"
+                : mapView === "CORAL_REEFS"
+                  ? "View coral reefs fullscreen"
+                  : "View map fullscreen"
+            }
+            aria-label={
+              isFullscreen
+                ? "Exit fullscreen"
+                : mapView === "CORAL_REEFS"
+                  ? "View coral reefs fullscreen"
+                  : "View map fullscreen"
+            }
           >
             {isFullscreen ? (
               <svg
