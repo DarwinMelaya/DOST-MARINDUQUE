@@ -27,10 +27,10 @@ const LandingPage = () => {
       ([entry]) => {
         // Show controls habang malinaw na nakatingin sa map section (hindi lang dumaan).
         setMapNavVisible(
-          entry.isIntersecting && entry.intersectionRatio >= 0.2
+          entry.isIntersecting && entry.intersectionRatio >= 0.2,
         );
       },
-      { threshold: [0, 0.2, 0.35, 0.5, 0.75, 1] }
+      { threshold: [0, 0.2, 0.35, 0.5, 0.75, 1] },
     );
 
     observer.observe(el);
@@ -125,26 +125,25 @@ const LandingPage = () => {
       <button
         type="button"
         onClick={() => setChatBotOpen(true)}
-        className="fixed bottom-5 right-5 z-[1050] inline-flex h-12 items-center gap-2 rounded-full border border-white/10 bg-slate-950/85 px-4 text-sm font-semibold text-white shadow-[0_14px_40px_rgba(0,0,0,.45)] backdrop-blur-md transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 sm:bottom-7 sm:right-7"
+        className="fixed bottom-5 right-5 z-[1050] inline-flex h-28 w-28 items-center justify-center bg-transparent text-white transition hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 sm:bottom-7 sm:right-7 sm:h-36 sm:w-36"
         aria-label="Open ChatBot"
       >
-        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-r from-[#0054A6] to-[#0B3B76] shadow-lg shadow-[#0054A6]/25">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            className="h-5 w-5"
-            aria-hidden
+        <span className="relative inline-flex h-full w-full items-center justify-center">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="h-full w-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.45)]"
           >
-            <path d="M7.5 8.25a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5a.75.75 0 0 1-.75-.75ZM7.5 12a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5A.75.75 0 0 1 7.5 12Z" />
-            <path
-              fillRule="evenodd"
-              d="M12 2.25c-5.385 0-9.75 3.97-9.75 8.864 0 2.592 1.246 4.918 3.25 6.52v2.357a1.5 1.5 0 0 0 2.33 1.252l2.259-1.506c.612.1 1.25.152 1.911.152 5.385 0 9.75-3.97 9.75-8.864C21.75 6.22 17.385 2.25 12 2.25Z"
-              clipRule="evenodd"
-            />
-          </svg>
+            <source src="/Assets/Chatbot/Chatbot.webm" type="video/webm" />
+          </video>
+          <span className="absolute -top-5 left-1/2 inline-flex -translate-x-1/2 items-center gap-1 rounded-full border border-cyan-200/30 bg-slate-900/90 px-2 py-1 text-[10px] font-semibold text-cyan-100 shadow-[0_8px_20px_rgba(0,0,0,.4)] sm:-top-7 sm:text-xs">
+            <span className="text-[11px] sm:text-sm">💬</span>
+            Chat tayo!
+          </span>
         </span>
-        <span className="hidden sm:inline">ChatBot</span>
       </button>
 
       <ChatBot open={chatBotOpen} onClose={() => setChatBotOpen(false)} />
